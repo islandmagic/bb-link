@@ -1,4 +1,4 @@
-# B.B. Link, the BLE to Bluetooth Classic adapter for Kenwood TH-D7x Radios
+# B.B. Link, the BLE to Bluetooth Classic adapter for Kenwood TH-D74/5 Radios
 
 Some devices, like the Kenwood TH-D74 radio only support Bluetooth Classic serial profile. iOS devices only support Bluetooth Low Energy (BLE). They are not compatible and as such, you can't pair those devices together. This code provides a way to create an adapter that can interface a device that exposes a serial profile over Bluetooth Classic, to an iOS device via BLE. Its main purpose is to enable iOS app that supports AX.25 packet like RadioMail or APRS.fi to use the TNC built in the radio as a modem.
 
@@ -13,8 +13,8 @@ The adapter is based on the ESP32 microcontroller, which provides support for bo
 1. TinyPICO [Buy](https://www.tinypico.com/buy)
 2. 600 mAh LiPo Battery model 602248 (6x22x48mm) [Buy](https://www.aliexpress.us/item/2251832520607268.html)
 3. 3D Printed Case
-  - [Enclosure]()
-  - [Lid]()
+  - [Enclosure](https://github.com/islandmagic/bb-link/blob/509948b28ea9a38c92ec310010292add382bb19f/enclosure/B.B.%20Link%20v38%20-%20Enclosure.stl)
+  - [Lid](https://github.com/islandmagic/bb-link/blob/509948b28ea9a38c92ec310010292add382bb19f/enclosure/B.B.%20Link%20v43%20-%20Lid.stl)
 4. Brad fastener as touch button (8mm head)
 
 ### Power Options
