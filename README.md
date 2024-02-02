@@ -12,9 +12,7 @@ The adapter is based on the ESP32 microcontroller, which provides support for bo
 
 1. TinyPICO [Buy](https://www.tinypico.com/buy)
 2. 600 mAh LiPo Battery model 602248 (6x22x48mm) [Buy](https://www.aliexpress.us/item/2251832520607268.html)
-3. 3D Printed Case
-  - [Enclosure](https://github.com/islandmagic/bb-link/blob/509948b28ea9a38c92ec310010292add382bb19f/enclosure/B.B.%20Link%20v38%20-%20Enclosure.stl)
-  - [Lid](https://github.com/islandmagic/bb-link/blob/509948b28ea9a38c92ec310010292add382bb19f/enclosure/B.B.%20Link%20v43%20-%20Lid.stl)
+3. 3D Printed [Case](https://github.com/islandmagic/bb-link/tree/master/enclosure)
 4. Brad fastener as touch button (8mm head)
 
 ### Power Options
