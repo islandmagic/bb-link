@@ -12,7 +12,7 @@ The adapter is based on the ESP32 microcontroller, which provides support for bo
 
 ### Material
 
-1. TinyPICO [Buy](https://www.tinypico.com/buy)
+1. TinyPICO [Buy](https://unexpectedmaker.com/shop.html#!/TinyPICO/p/577111313/category=154494282)
 2. 600 mAh LiPo Battery model 602248 (6x22x48mm) [Buy](https://www.aliexpress.us/item/2251832520607268.html)
 3. 3D Printed [Case](https://github.com/islandmagic/bb-link/tree/master/enclosure)
 4. Brad fastener as touch button (8mm head)
@@ -135,3 +135,15 @@ Alternatively, you can reset the adapter by connecting it to a computer. Here's 
 ### Known Issues
 
 1. The ESP32 library is limited to discovering Bluetooth Classic devices exclusively prior to establishing any connections. After connecting with a device, the discovery capability is no longer available. To initiate a new scan, the adapter must be rebooted. If you intend to pair with a different radio, ensure that the radio previously paired with is turned off before powering on the adapter. If not, the adapter will automatically re-establish a connection with the previously paired radio, preventing it from discovering new radios.
+
+### How to Contribute
+
+This project is open source, so everyone's contribution is welcome. Here's a quick guide to get started:
+
+* **Share**: If you build your own adapter, share it online! Post photos, write a blog post, or create a tutorial video to show others how it's done.
+* **Update Documentation**: Help improve or correct the documentation. Fork the repo, make your updates, and submit a pull request.
+* **Submit Change Requests**: If you're developing a new feature or bug fix, fork the repository, create a new branch for your changes, and submit a pull request with a clear description of your modifications.
+* **Write Good Issue Reports**: If you encounter bugs or have feature suggestions, please submit an issue report with a clear title, a detailed description, and steps to reproduce the issue if it's a bug.
+
+The source code for the [Configurator](https://github.com/islandmagic/ios-bblink-config) app is available as well.
+
