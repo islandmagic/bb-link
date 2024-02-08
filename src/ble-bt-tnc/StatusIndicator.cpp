@@ -165,6 +165,7 @@ u_int32_t StatusIndicator::colorForStatus()
   case rx:
     return 0x00FF00;
   case duplex:
+  case otaFlash:
     return 0xA020F0; // Purple
   case error:
     return 0xFF0000;
@@ -178,13 +179,13 @@ led_mode_t StatusIndicator::modeForStatus()
   case connected:
     return breathe;
   case error:
+  case scanning:
     return flash;
   case batteryLow:
   case batteryShutdown:
   case actionRegistered:
+  case otaFlash:
     return fastBlink;
-  case scanning:
-    return flash;
   case shutdown:
     return fadeOut;
   default:

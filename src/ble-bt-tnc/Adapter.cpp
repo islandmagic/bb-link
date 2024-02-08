@@ -10,6 +10,10 @@
 
 #define VBUS_SENSE_GPIO 9
 
+#define SERVICE_UUID_OTA                   "1A68D2B0-C2E4-453F-A2BB-B659D66CF442"
+#define CHARACTERISTIC_UUID_OTA_FLASH      "1A68D2B1-C2E4-453F-A2BB-B659D66CF442"
+#define CHARACTERISTIC_UUID_OTA_IDENTITY   "1A68D2B2-C2E4-453F-A2BB-B659D66CF442"
+
 // AdapterState
 Adapter::Adapter() : idleState(
                          [this]
@@ -39,12 +43,20 @@ Adapter::Adapter() : idleState(
                          { this->showBatteryUpdate(); },
                          [this]
                          { this->showBatteryExit(); }),
+                    otaFlashState(
+                         [this]
+                         { this->otaFlashEnter(); },
+                         [this]
+                         { this->otaFlashUpdate(); },
+                         [this]
+                         { this->otaFlashExit(); }),
                      adapterStateMachine(idleState)
 {
 }
 
 void Adapter::init()
 {
+  Serial.println("Adapter: init");
   pinMode(VBUS_SENSE_GPIO, INPUT);
 
   statusIndicator.init();
@@ -65,13 +77,47 @@ void Adapter::init()
       delay(10);
     }
   }
+
+  // Make sure bridge is initialized first
+  initBLEOtaService();
+}
+
+void Adapter::initBLEOtaService()
+{
+  Serial.println("Adapter: init BLE OTA service");
+
+  // Create the BLE Service for OTA
+  BLEService *pOtaService = bridge.getBLEServer()->createService(SERVICE_UUID_OTA);
+  
+  pOtaFlash = pOtaService->createCharacteristic(
+      CHARACTERISTIC_UUID_OTA_FLASH,
+      BLECharacteristic::PROPERTY_WRITE);
+
+  pOtaIdentity = pOtaService->createCharacteristic(
+      CHARACTERISTIC_UUID_OTA_IDENTITY,
+      BLECharacteristic::PROPERTY_READ);
+
+  pOtaFlash->addDescriptor(new BLE2902());
+
+  pOtaFlash->setAccessPermissions(ESP_GATT_PERM_WRITE);
+  pOtaIdentity->setAccessPermissions(ESP_GATT_PERM_READ);
+
+  pOtaFlash->setCallbacks(this);
+  
+  pOtaService->start();
+
+  uint8_t identity[6] = {HARDWARE_BOARD, HARDWARE_VERSION_MAJOR, HARDWARE_VERSION_MINOR, FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH};
+  pOtaIdentity->setValue(identity, 6);
 }
 
 void Adapter::perform()
 {
   statusIndicator.render();
-  touchButton.process();
-  lowBatteryWatchguard();
+  if (!adapterStateMachine.isInState(otaFlashState))
+  {
+    touchButton.process();
+    lowBatteryWatchguard();
+  }
   adapterStateMachine.update();
 }
 
@@ -127,7 +173,7 @@ void Adapter::doShutdown()
 }
 
 /*
-  Touchbutton Callbacks
+  Touch button Callbacks
 */
 void Adapter::onLongPressed()
 {
@@ -152,6 +198,48 @@ void Adapter::onShortPressed()
     Serial.println("Showing battery status");
     adapterStateMachine.transitionTo(showBatteryState);
   }
+}
+
+
+/*
+  BLECharacteristicCallbacks
+*/
+void Adapter::onWrite(BLECharacteristic *pCharacteristic)
+{
+  std::string rxData = pCharacteristic->getValue();
+
+  if (!adapterStateMachine.isInState(otaFlashState))
+  {    
+    Serial.println("OTA: begin flash");
+    adapterStateMachine.immediateTransitionTo(otaFlashState);
+    esp_ota_begin(esp_ota_get_next_update_partition(NULL), OTA_SIZE_UNKNOWN, &otaHandle);
+  }
+
+  if (rxData.length() > 0)
+  {
+    esp_ota_write(otaHandle, rxData.c_str(), rxData.length());
+  }
+  else
+  {
+    Serial.println("OTA: end flash");
+    esp_ota_end(otaHandle);
+    if (esp_ota_set_boot_partition(esp_ota_get_next_update_partition(NULL)) == ESP_OK)
+    {
+      Serial.println("OTA: success, rebooting");
+      delay(2000);
+      esp_restart();
+    }
+    else
+    {
+      Serial.println("OTA: failed");
+    }
+    adapterStateMachine.transitionTo(idleState);
+  }
+}
+
+void Adapter::onRead(BLECharacteristic *pCharacteristic)
+{
+  Serial.println("OTA: onRead!!!!");
 }
 
 /*
@@ -299,4 +387,21 @@ void Adapter::showBatteryUpdate()
 
 void Adapter::showBatteryExit()
 {
+}
+
+void Adapter::otaFlashEnter()
+{
+  Serial.println("Adapter: OTA flash");
+  statusIndicator.set(otaFlash);
+  bridge.disconnect();
+}
+
+void Adapter::otaFlashUpdate()
+{
+  // Do nothing, OTA is handled by BLECharacteristicCallbacks
+}
+
+void Adapter::otaFlashExit()
+{
+  // If OTA flash was successful, the device will reboot
 }

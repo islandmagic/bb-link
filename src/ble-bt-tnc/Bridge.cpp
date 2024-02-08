@@ -74,6 +74,7 @@ Bridge::Bridge(String adapterName) : bleDisconnectedState(
 
 bool Bridge::init()
 {
+  Serial.println("Bridge: init");
   rxLingerUntil = millis();
   txLingerUntil = millis();
 
@@ -165,6 +166,7 @@ bool Bridge::btcDiscovery()
 
 bool Bridge::initBTC()
 {
+  Serial.println("Bridge: initBTC");
   btSerial.enableSSP();
   btSerial.setPin("0000");
 
@@ -197,13 +199,14 @@ bool Bridge::isRx()
 
 bool Bridge::initBLE()
 {
-  BLEDevice::init(adapterName.c_str());
+  Serial.println("Bridge: initBLE");
 
-  BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(this);
+  BLEDevice::init(ADAPTER_NAME);
+  pBLEServer = BLEDevice::createServer();
+  pBLEServer->setCallbacks(this);
 
-  BLEService *pService = pServer->createService(SERVICE_UUID);
-
+  BLEService *pService = pBLEServer->createService(SERVICE_UUID);
+  
   pTx = pService->createCharacteristic(
       TX_UUID,
       BLECharacteristic::PROPERTY_WRITE_NR);
@@ -223,6 +226,11 @@ bool Bridge::initBLE()
   pService->start();
 
   return true;
+}
+
+BLEServer * Bridge::getBLEServer()
+{
+  return pBLEServer;
 }
 
 void Bridge::startAdvertisingBLE()
@@ -509,7 +517,9 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   case extended_hw_firmware_version:
   {
     Serial.println("BTC: executing extended_hw_firmware_version");
-    reply(EXTENDED_HW_CMD_FIRMWARE_VERSION, (uint8_t *)FIRMWARE_VERSION, strlen(FIRMWARE_VERSION));
+    // create period delimited version string
+    String version = String(FIRMWARE_VERSION_MAJOR) + "." + String(FIRMWARE_VERSION_MINOR) + "." + String(FIRMWARE_VERSION_PATCH);
+    reply(EXTENDED_HW_CMD_FIRMWARE_VERSION, (uint8_t *)version.c_str(), strlen(version.c_str()));
     break;
   }
   case extended_hw_capabilities:
@@ -614,6 +624,14 @@ void Bridge::onDisconnect(BLEServer *pServer)
   bleStateMachine.transitionTo(bleDisconnectedState);
 }
 
+void Bridge::onMtuChanged(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
+{
+  Serial.println("BLE: onMtuChanged");
+  Serial.print("New MTU size: ");
+  mtuSize = param->mtu.mtu;
+  Serial.println(mtuSize);
+}
+
 /*
   BLECharacteristicCallbacks
 */
@@ -650,14 +668,6 @@ void Bridge::onWrite(BLECharacteristic *pCharacteristic)
 void Bridge::onRead(BLECharacteristic *pCharacteristic)
 {
   Serial.println("BLE: onRead!!!!");
-}
-
-void Bridge::onMtuChanged(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
-{
-  Serial.println("BLE: onMtuChanged");
-  Serial.print("New MTU size: ");
-  mtuSize = param->mtu.mtu;
-  Serial.println(mtuSize);
 }
 
 /*

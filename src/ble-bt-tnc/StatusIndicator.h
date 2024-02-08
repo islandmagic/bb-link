@@ -18,7 +18,8 @@ enum status_t
   batteryLow = 0x09,
   batteryShutdown = 0x0A,
   actionRegistered = 0x0B,
-  scanning = 0x0C
+  scanning = 0x0C,
+  otaFlash = 0x0D
 };
 
 enum led_mode_t
