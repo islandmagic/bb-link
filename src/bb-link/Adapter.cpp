@@ -10,6 +10,10 @@
 
 #define VBUS_SENSE_GPIO 9
 
+#define SERVICE_UUID_OTA "1A68D2B0-C2E4-453F-A2BB-B659D66CF442"
+#define CHARACTERISTIC_UUID_OTA_FLASH "1A68D2B1-C2E4-453F-A2BB-B659D66CF442"
+#define CHARACTERISTIC_UUID_OTA_IDENTITY "1A68D2B2-C2E4-453F-A2BB-B659D66CF442"
+
 // AdapterState
 Adapter::Adapter() : idleState(
                          [this]
@@ -39,13 +43,23 @@ Adapter::Adapter() : idleState(
                          { this->showBatteryUpdate(); },
                          [this]
                          { this->showBatteryExit(); }),
+                     otaFlashState(
+                         [this]
+                         { this->otaFlashEnter(); },
+                         [this]
+                         { this->otaFlashUpdate(); },
+                         [this]
+                         { this->otaFlashExit(); }),
                      adapterStateMachine(idleState)
 {
 }
 
 void Adapter::init()
 {
+  Serial.println("Adapter: init");
   pinMode(VBUS_SENSE_GPIO, INPUT);
+
+  Serial.printf("Adapter: board hardware %i, version %i.%i, firmware %i.%i.%i\n", HARDWARE_BOARD, HARDWARE_VERSION_MAJOR, HARDWARE_VERSION_MINOR, FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH);
 
   statusIndicator.init();
   touchButton.init();
@@ -53,7 +67,9 @@ void Adapter::init()
   touchButton.setOnLongPressedCallback(std::bind(&Adapter::onLongPressed, this));
   touchButton.setOnShortPressedCallback(std::bind(&Adapter::onShortPressed, this));
 
+#if defined(ARDUINO_TINYPICO)
   touchSleepWakeUpEnable(CAPACITIVE_TOUCH_INPUT_PIN, TOUCH_THRESHOLD);
+#endif
 
   if (!bridge.init())
   {
@@ -65,13 +81,82 @@ void Adapter::init()
       delay(10);
     }
   }
+
+  // Make sure bridge is initialized first
+  initBLEOtaService();
+
+  verifyFirmware();
+}
+
+void Adapter::verifyFirmware()
+{
+  Serial.println("Checking firmware...");
+  const esp_partition_t *running = esp_ota_get_running_partition();
+  esp_ota_img_states_t ota_state;
+  if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK)
+  {
+    const char *otaState = ota_state == ESP_OTA_IMG_NEW              ? "ESP_OTA_IMG_NEW"
+                           : ota_state == ESP_OTA_IMG_PENDING_VERIFY ? "ESP_OTA_IMG_PENDING_VERIFY"
+                           : ota_state == ESP_OTA_IMG_VALID          ? "ESP_OTA_IMG_VALID"
+                           : ota_state == ESP_OTA_IMG_INVALID        ? "ESP_OTA_IMG_INVALID"
+                           : ota_state == ESP_OTA_IMG_ABORTED        ? "ESP_OTA_IMG_ABORTED"
+                                                                     : "ESP_OTA_IMG_UNDEFINED";
+    Serial.printf("OTA state: %s\n", otaState);
+
+    if (ota_state == ESP_OTA_IMG_PENDING_VERIFY)
+    {
+      if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK)
+      {
+        Serial.println("App is valid, rollback cancelled successfully");
+      }
+      else
+      {
+        Serial.println("Failed to cancel rollback");
+      }
+    }
+  }
+  else
+  {
+    Serial.println("OTA partition has no record in OTA data");
+  }
+}
+
+void Adapter::initBLEOtaService()
+{
+  Serial.println("Adapter: init BLE OTA service");
+
+  // Create the BLE Service for OTA
+  BLEService *pOtaService = bridge.getBLEServer()->createService(SERVICE_UUID_OTA);
+
+  pOtaFlash = pOtaService->createCharacteristic(
+      CHARACTERISTIC_UUID_OTA_FLASH,
+      BLECharacteristic::PROPERTY_WRITE);
+
+  pOtaIdentity = pOtaService->createCharacteristic(
+      CHARACTERISTIC_UUID_OTA_IDENTITY,
+      BLECharacteristic::PROPERTY_READ);
+
+  pOtaFlash->addDescriptor(new BLE2902());
+
+  pOtaFlash->setAccessPermissions(ESP_GATT_PERM_WRITE);
+  pOtaIdentity->setAccessPermissions(ESP_GATT_PERM_READ);
+
+  pOtaFlash->setCallbacks(this);
+
+  uint8_t identity[6] = {HARDWARE_BOARD, HARDWARE_VERSION_MAJOR, HARDWARE_VERSION_MINOR, FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH};
+  pOtaIdentity->setValue(identity, 6);
+
+  pOtaService->start();
 }
 
 void Adapter::perform()
 {
   statusIndicator.render();
-  touchButton.process();
-  lowBatteryWatchguard();
+  if (!adapterStateMachine.isInState(otaFlashState))
+  {
+    touchButton.process();
+    lowBatteryWatchguard();
+  }
   adapterStateMachine.update();
 }
 
@@ -98,6 +183,7 @@ void Adapter::updateSendReceiveStatus()
 
 void Adapter::lowBatteryWatchguard()
 {
+#if defined(ARDUINO_TINYPICO)
   unsigned long now = millis();
   if (now - lastBatteryCheck > BATTERY_WATCHGUARD_INTERVAL)
   {
@@ -111,6 +197,7 @@ void Adapter::lowBatteryWatchguard()
       adapterStateMachine.transitionTo(shutdownState);
     }
   }
+#endif
 }
 
 bool Adapter::isUSBPower()
@@ -127,7 +214,7 @@ void Adapter::doShutdown()
 }
 
 /*
-  Touchbutton Callbacks
+  Touch button Callbacks
 */
 void Adapter::onLongPressed()
 {
@@ -152,6 +239,48 @@ void Adapter::onShortPressed()
     Serial.println("Showing battery status");
     adapterStateMachine.transitionTo(showBatteryState);
   }
+}
+
+/*
+  BLECharacteristicCallbacks
+*/
+void Adapter::onWrite(BLECharacteristic *pCharacteristic)
+{
+  std::string rxData = pCharacteristic->getValue();
+
+  if (!adapterStateMachine.isInState(otaFlashState))
+  {
+    Serial.println("OTA: begin flash");
+    adapterStateMachine.immediateTransitionTo(otaFlashState);
+    esp_ota_begin(esp_ota_get_next_update_partition(NULL), OTA_SIZE_UNKNOWN, &otaHandle);
+  }
+
+  if (rxData.length() > 0)
+  {
+    esp_ota_write(otaHandle, rxData.c_str(), rxData.length());
+    Serial.printf("OTA: written %i bytes\n", rxData.length());
+  }
+  else
+  {
+    Serial.println("OTA: end flash");
+    esp_ota_end(otaHandle);
+    if (esp_ota_set_boot_partition(esp_ota_get_next_update_partition(NULL)) == ESP_OK)
+    {
+      Serial.println("OTA: success, rebooting");
+      delay(2000);
+      esp_restart();
+    }
+    else
+    {
+      Serial.println("OTA: failed");
+    }
+    adapterStateMachine.transitionTo(idleState);
+  }
+}
+
+void Adapter::onRead(BLECharacteristic *pCharacteristic)
+{
+  Serial.println("OTA: onRead!!!!");
 }
 
 /*
@@ -277,6 +406,7 @@ void Adapter::shutdownExit()
 
 void Adapter::showBatteryEnter()
 {
+#if defined(ARDUINO_TINYPICO)
   float level = tp.GetBatteryVoltage();
   Serial.printf("Battery voltage %.3f V\n", level);
   if (level > BATTERY_FULL_VOLTAGE)
@@ -287,6 +417,7 @@ void Adapter::showBatteryEnter()
   {
     statusIndicator.set(batteryLow);
   }
+#endif
 }
 
 void Adapter::showBatteryUpdate()
@@ -299,4 +430,21 @@ void Adapter::showBatteryUpdate()
 
 void Adapter::showBatteryExit()
 {
+}
+
+void Adapter::otaFlashEnter()
+{
+  Serial.println("Adapter: OTA flash");
+  statusIndicator.set(otaFlash);
+  bridge.disconnect();
+}
+
+void Adapter::otaFlashUpdate()
+{
+  // Do nothing, OTA is handled by BLECharacteristicCallbacks
+}
+
+void Adapter::otaFlashExit()
+{
+  // If OTA flash was successful, the device will reboot
 }

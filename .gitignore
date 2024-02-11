@@ -49,3 +49,5 @@ Thumbs.db
 *.wmv
 
 .vscode/
+
+src/bb-link/build/

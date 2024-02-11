@@ -74,6 +74,7 @@ Bridge::Bridge(String adapterName) : bleDisconnectedState(
 
 bool Bridge::init()
 {
+  Serial.println("Bridge: init");
   rxLingerUntil = millis();
   txLingerUntil = millis();
 
@@ -131,6 +132,7 @@ void Bridge::perform()
 void Bridge::disconnect()
 {
   clearAllPendingBTCData();
+  connectToPairedDevice = false;
   btSerial.disconnect();
 }
 
@@ -165,6 +167,7 @@ bool Bridge::btcDiscovery()
 
 bool Bridge::initBTC()
 {
+  Serial.println("Bridge: initBTC");
   btSerial.enableSSP();
   btSerial.setPin("0000");
 
@@ -197,12 +200,13 @@ bool Bridge::isRx()
 
 bool Bridge::initBLE()
 {
-  BLEDevice::init(adapterName.c_str());
+  Serial.println("Bridge: initBLE");
 
-  BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(this);
+  BLEDevice::init(ADAPTER_NAME);
+  pBLEServer = BLEDevice::createServer();
+  pBLEServer->setCallbacks(this);
 
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLEService *pService = pBLEServer->createService(SERVICE_UUID);
 
   pTx = pService->createCharacteristic(
       TX_UUID,
@@ -223,6 +227,11 @@ bool Bridge::initBLE()
   pService->start();
 
   return true;
+}
+
+BLEServer *Bridge::getBLEServer()
+{
+  return pBLEServer;
 }
 
 void Bridge::startAdvertisingBLE()
@@ -434,7 +443,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
     {
       Serial.println("BTC: executing extended_hw_restore_frequency");
 
-      if (vfo != vfoUnknown && previousFrequency > 0) 
+      if (vfo != vfoUnknown && previousFrequency > 0)
       {
         if (thd7x.isKISSMode())
         {
@@ -509,7 +518,9 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   case extended_hw_firmware_version:
   {
     Serial.println("BTC: executing extended_hw_firmware_version");
-    reply(EXTENDED_HW_CMD_FIRMWARE_VERSION, (uint8_t *)FIRMWARE_VERSION, strlen(FIRMWARE_VERSION));
+    // create period delimited version string
+    String version = String(FIRMWARE_VERSION_MAJOR) + "." + String(FIRMWARE_VERSION_MINOR) + "." + String(FIRMWARE_VERSION_PATCH);
+    reply(EXTENDED_HW_CMD_FIRMWARE_VERSION, (uint8_t *)version.c_str(), strlen(version.c_str()));
     break;
   }
   case extended_hw_capabilities:
@@ -614,6 +625,14 @@ void Bridge::onDisconnect(BLEServer *pServer)
   bleStateMachine.transitionTo(bleDisconnectedState);
 }
 
+void Bridge::onMtuChanged(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
+{
+  Serial.println("BLE: onMtuChanged");
+  Serial.print("New MTU size: ");
+  mtuSize = param->mtu.mtu;
+  Serial.println(mtuSize);
+}
+
 /*
   BLECharacteristicCallbacks
 */
@@ -652,14 +671,6 @@ void Bridge::onRead(BLECharacteristic *pCharacteristic)
   Serial.println("BLE: onRead!!!!");
 }
 
-void Bridge::onMtuChanged(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
-{
-  Serial.println("BLE: onMtuChanged");
-  Serial.print("New MTU size: ");
-  mtuSize = param->mtu.mtu;
-  Serial.println(mtuSize);
-}
-
 /*
   BTC callbacks
 */
@@ -675,7 +686,11 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
   if (success)
   {
     Serial.println("Pairing success");
-    // Save the name and address of the radio
+    /*
+      Save the name and address of the radio we just paired
+      This so we can connect to it next time we start the device and
+      display its name in the configuration app
+    */
     preferences.begin(PREFERENCES_NAMESPACE, false);
     preferences.putString(PREF_RADIO_NAME, remoteName);
     preferences.putBytes(PREF_RADIO_ADDRESS, remoteAddress, ESP_BD_ADDR_LEN);
@@ -693,7 +708,9 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
 void Bridge::btcDisconnectedEnter()
 {
   Serial.println("BTC: disconnected");
-  if (connectToPairedDevice)
+  // Only attempt to connect to BTC if we have a paired device and nothing is connected to BLE
+  // oththerwise, attempting to connect to BTC seems to disconnect BLE because it's blocking
+  if (connectToPairedDevice && !bleStateMachine.isInState(bleConnectedState))
   {
     // The connect method in BT serial is blocking. Use a task to connect
     Serial.printf("BTC: attempt to connect to %s at %s\n", remoteName, BTAddress(remoteAddress).toString().c_str());
@@ -757,6 +774,7 @@ void Bridge::btcDiscoveryEnter()
     Name: TH-D74, Address: 04:ee:03:61:2d:b0, cod: 0x620204, rssi: -55
     Name: TNC4 Mobilinkd, Address: 34:81:f4:aa:b2:dd, cod: 0x4c0300, rssi: -24
     Name: PicoAPRS, Address: 4c:75:25:65:29:82, cod: 0x001f00, rssi: -64
+    Name: TH-D75, Address: 40:79:12:e4:65:44, cod: 0x620204, rssi: -62
     */
     // Filter list to known Kenwood handsets capabilities signature
     // https://www.ampedrftech.com/cod.htm?result=620204
