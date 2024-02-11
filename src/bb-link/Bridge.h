@@ -43,8 +43,6 @@ public:
   bool isRx();
   void clearPairedDevices();
   void disconnect();
-  void bleConnected();
-  void bleDisconnected();
   void factoryReset();
   BLEServer * getBLEServer();
 
