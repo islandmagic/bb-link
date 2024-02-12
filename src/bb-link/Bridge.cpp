@@ -613,9 +613,19 @@ void Bridge::reply(uint8_t *response, size_t size)
 /*
   BLEServerCallbacks
 */
-void Bridge::onConnect(BLEServer *pServer)
+void Bridge::onConnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
 {
   Serial.println("BLE: onConnect");
+
+  esp_ble_conn_update_params_t conn_params = {};
+  memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
+  conn_params.latency = 0;
+  conn_params.max_int = 32;  // *1.25ms = 40ms
+  conn_params.min_int = 16;  // *1.25ms = 20ms
+  conn_params.timeout = 500; // *10ms = 5000ms
+  // Start the update process
+  esp_ble_gap_update_conn_params(&conn_params);
+
   bleStateMachine.transitionTo(bleConnectedState);
 }
 
@@ -708,9 +718,7 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
 void Bridge::btcDisconnectedEnter()
 {
   Serial.println("BTC: disconnected");
-  // Only attempt to connect to BTC if we have a paired device and nothing is connected to BLE
-  // oththerwise, attempting to connect to BTC seems to disconnect BLE because it's blocking
-  if (connectToPairedDevice && !bleStateMachine.isInState(bleConnectedState))
+  if (connectToPairedDevice)
   {
     // The connect method in BT serial is blocking. Use a task to connect
     Serial.printf("BTC: attempt to connect to %s at %s\n", remoteName, BTAddress(remoteAddress).toString().c_str());

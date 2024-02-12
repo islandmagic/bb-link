@@ -109,7 +109,7 @@ private:
   void onBTAuthCompleteCallback(bool success);
 
   void onMtuChanged(BLEServer *pServer, esp_ble_gatts_cb_param_t *param);
-  void onConnect(BLEServer *pServer);
+  void onConnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param);
   void onDisconnect(BLEServer *pServer);  
 
   void bleDisconnectedEnter();
