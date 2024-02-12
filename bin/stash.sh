@@ -3,6 +3,9 @@
 # extract version from git tag
 VERSION=$(git describe --tags --abbrev=0)
 
+# remove the v prefix
+VERSION=${VERSION:1}
+
 # make sure there is a version
 if [ -z "$VERSION" ]; then
     echo "No version found"
@@ -19,12 +22,12 @@ sha256sum ~/Downloads/bb-link-tinypico-${VERSION}.bin | cut -d ' ' -f 1 > ~/Down
 # generate .json file
 echo "{
   \"version\": \"${VERSION}\",
-  \"url\": \"https://github.com/islandmagic/bb-link/releases/download/${VERSION}/bb-link-pico32-${VERSION}.bin\",
+  \"url\": \"https://github.com/islandmagic/bb-link/releases/download/v${VERSION}/bb-link-pico32-${VERSION}.bin\",
   \"sha256\": \"$(cat ~/Downloads/bb-link-pico32-${VERSION}.bin.sha256.txt)\",
 }" > ~/Downloads/bb-link-pico32-${VERSION}.json
 
 echo "{
   \"version\": \"${VERSION}\",
-  \"url\": \"https://github.com/islandmagic/bb-link/releases/download/${VERSION}/bb-link-tinypico-${VERSION}.bin\",
+  \"url\": \"https://github.com/islandmagic/bb-link/releases/download/v${VERSION}/bb-link-tinypico-${VERSION}.bin\",
   \"sha256\": \"$(cat ~/Downloads/bb-link-tinypico-${VERSION}.bin.sha256.txt)\",
 }" > ~/Downloads/bb-link-tinypico-${VERSION}.json
