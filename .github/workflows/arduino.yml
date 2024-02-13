@@ -64,12 +64,14 @@ jobs:
       - name: Upload binaries artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: src/bb-link/build/bb-link*
+          name: bin-${{matrix.board}}
+          path: src/bb-link/build/bb-link-${{matrix.board}}*
           if-no-files-found: error
       - name: Upload ota artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: src/bb-link/build/ota/**/*.json
+          name: ota-${{matrix.board}}
+          path: src/bb-link/build/ota/*/beta.json
           if-no-files-found: error
   release:
     needs: build
@@ -93,7 +95,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
+          pattern: bin-*
+          merge-multiple: true
       - name: Upload Release Assets
         id: upload_release_assets
         uses: dwenegar/upload-release-assets@v1
@@ -112,6 +115,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: ota-*
+          merge-multiple: true
       - name: Setup git user/email
         run: |
           git config --global user.name github-actions
@@ -123,7 +128,7 @@ jobs:
           path: ota-firmware
       - name: Publish OTA
         run: |
-          cp -r artifacts/ota/* ota-firmware/
+          cp -r artifacts/* ota-firmware/
           cd ota-firmware
           [ -z "$(git status -s -- .)" ] && echo "No changes to be committed. Exiting." && exit 0
           git add -- .
