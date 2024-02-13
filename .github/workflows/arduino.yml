@@ -40,26 +40,26 @@ jobs:
           arduino-cli lib install "ArduinoQueue"@1.2.5
       - name: Compile
         run: |
-          arduino-cli compile --verbose --fqbn ${{matrix.arduino-board}} --export-binaries src/bb-link/bb-link.ino
+          arduino-cli compile --fqbn ${{matrix.arduino-board}} --export-binaries src/bb-link/bb-link.ino
       - name: Define version
         run: |
-          VERSION=${{ github.ref }}
-          VERSION=${VERSION:1}
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
       - name: Rename binary
         run: |
           fqbnpath=$(echo ${{matrix.arduino-board}} | tr ':' '.')
-          cp src/bb-link/build/$fqbnpath/bb-link.ino.bin src/bb-link/build/bb-link-${{matrix.board}}-${VERSION}.bin
+          cp src/bb-link/build/$fqbnpath/bb-link.ino.bin src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin
       - name: Calculate checksum
         run: |
-          sha256sum src/bb-link/build/bb-link-${{matrix.board}}-${VERSION}.bin | cut -d ' ' -f 1 > src/bb-link/build/bb-link-${{matrix.board}}-${VERSION}.bin.sha256.txt
-          cat src/bb-link/build/bb-link-${{matrix.board}}-${VERSION}.bin.sha256.txt
+          sha256sum src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin | cut -d ' ' -f 1 > src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin.sha256.txt
       - name: Create OTA manifest
         run: |
           mkdir -p src/bb-link/build/ota/${{matrix.board}}
           echo "{
-            \"version\": \"${VERSION}\",
-            \"url\": \"https://github.com/islandmagic/bb-link/releases/download/v${VERSION}/bb-link-${{matrix.board}}-${VERSION}.bin\",
-            \"sha256\": \"$(cat src/bb-link/build/bb-link-${{matrix.board}}-${VERSION}.bin.sha256.txt)\",
+            \"version\": \"${{env.VERSION}}\",
+            \"url\": \"https://github.com/islandmagic/bb-link/releases/download/v${{env.VERSION}}/bb-link-${{matrix.board}}-${{env.VERSION}}.bin\",
+            \"sha256\": \"$(cat src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin.sha256.txt)\"
           }" > src/bb-link/build/ota/${{matrix.board}}/beta.json
       - name: Upload binaries artifacts
         uses: actions/upload-artifact@v4
