@@ -30,7 +30,7 @@
 
 #define FIRMWARE_VERSION_MAJOR 0
 #define FIRMWARE_VERSION_MINOR 7
-#define FIRMWARE_VERSION_PATCH 2
+#define FIRMWARE_VERSION_PATCH 3
 
 enum hardware_board_t {
   hardware_board_unknown = 0,

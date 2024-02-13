@@ -1,0 +1,137 @@
+name: Build and Release
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        board: [tinypico, pico32]
+        include:
+          - board: tinypico
+            arduino-platform: esp32:esp32
+            arduino-platform-version: 2.0.14
+            arduino-board: esp32:esp32:tinypico
+          - board: pico32
+            arduino-platform: esp32:esp32
+            arduino-platform-version: 2.0.14
+            arduino-board: esp32:esp32:pico32
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install pyserial
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
+      - name: Install core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install --additional-urls "https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json" ${{matrix.arduino-platform}}@${{matrix.arduino-platform-version}}
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "TinyPICO Helper Library"@1.4.0
+          arduino-cli lib install "FreeRTOS"@11.0.1-2
+          arduino-cli lib install "ArduinoQueue"@1.2.5
+      - name: Compile
+        run: |
+          arduino-cli compile --fqbn ${{matrix.arduino-board}} --export-binaries src/bb-link/bb-link.ino
+      - name: Define version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+      - name: Rename binary
+        run: |
+          fqbnpath=$(echo ${{matrix.arduino-board}} | tr ':' '.')
+          cp src/bb-link/build/$fqbnpath/bb-link.ino.bin src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin
+      - name: Calculate checksum
+        run: |
+          sha256sum src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin | cut -d ' ' -f 1 > src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin.sha256.txt
+      - name: Create OTA manifest
+        run: |
+          mkdir -p src/bb-link/build/ota/${{matrix.board}}
+          echo "{
+            \"version\": \"${{env.VERSION}}\",
+            \"url\": \"https://github.com/islandmagic/bb-link/releases/download/v${{env.VERSION}}/bb-link-${{matrix.board}}-${{env.VERSION}}.bin\",
+            \"sha256\": \"$(cat src/bb-link/build/bb-link-${{matrix.board}}-${{env.VERSION}}.bin.sha256.txt)\"
+          }" > src/bb-link/build/ota/${{matrix.board}}/beta.json
+      - name: Upload binaries artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{matrix.board}}
+          path: src/bb-link/build/bb-link-${{matrix.board}}*
+          if-no-files-found: error
+      - name: Upload ota artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-${{matrix.board}}
+          path: src/bb-link/build/ota/*/beta.json
+          if-no-files-found: error
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: true
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: bin-*
+          merge-multiple: true
+      - name: Upload Release Assets
+        id: upload_release_assets
+        uses: dwenegar/upload-release-assets@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ steps.create_release.outputs.id }}
+          assets_path: "./artifacts/*"
+  publish-ota:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: ota-*
+          merge-multiple: true
+      - name: Setup git user/email
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions@github.com
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ota-firmware
+          path: ota-firmware
+      - name: Publish OTA
+        run: |
+          cp -r artifacts/* ota-firmware/
+          cd ota-firmware
+          [ -z "$(git status -s -- .)" ] && echo "No changes to be committed. Exiting." && exit 0
+          git add -- .
+          git commit -m "Add new beta firmware"
+          git push origin ota-firmware
+          echo "Done."

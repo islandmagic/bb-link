@@ -1,0 +1,34 @@
+name: OTA publish
+on:
+  workflow_dispatch:
+
+jobs:
+  promote-beta-to-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup git user/email
+      run: |
+        git config --global user.name github-actions
+        git config --global user.email github-actions@github.com
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        ref: ota-firmware
+        path: ota-firmware
+
+    - name: Promote beta to release
+      run: |
+        cd ota-firmware
+        for dir in */; do
+          if [[ -f "${dir}beta.json" ]]; then
+          cp "${dir}beta.json" "${dir}latest.json"
+          fi
+        done
+        [ -z "$(git status -s -- .)" ] && echo "No changes to be committed. Exiting." && exit 0
+        git add -- .
+        git commit -m "Promoted beta to release."
+        git push origin ota-firmware
+        echo "Done."
