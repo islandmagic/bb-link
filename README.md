@@ -33,6 +33,7 @@ The installation of a capacitive touch button is not required but recommended if
 1. Install the TinyPICO helper library
 1. Install FreeRTOS library
 1. Install ArduinoQueue library
+1. Install ArduinoLog library
 1. Clone this repo
 1. Flash the code to the TinyPICO board
 1. Download [B.B. Link Configurator](https://apps.apple.com/us/app/b-b-link-configurator/id6476163710) app on your phone

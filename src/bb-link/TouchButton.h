@@ -16,7 +16,7 @@ public:
   void process() override
   {
     int touchValue = touchRead(buttonPin);
-    // Serial.printf("Touch value %i\n", touchValue);
+    // Log.infoln("Touch value %i", touchValue);
     if (touchValue < TOUCH_THRESHOLD)
     {
       // Button touched

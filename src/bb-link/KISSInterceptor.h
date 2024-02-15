@@ -3,25 +3,29 @@
 #define KISSINTERCEPTOR_H
 
 #include "Arduino.h"
+#ifndef EPOXY_DUINO
 #include "BLEDevice.h"
+#else
+#include "MockBLEDevice.h"
+#endif
 
-static const char CMD_HARDWARE = 0x06;
+static const uint8_t CMD_HARDWARE = 0x06;
 
-static const char EXTENDED_HW_CMD_FIRMWARE_VERSION = 0x28;
-static const char EXTENDED_HW_CMD_CAPABILITIES = 0x7E;
-static const char EXTENDED_HW_CMD_API_VERSION = 0x7B;
+static const uint8_t EXTENDED_HW_CMD_FIRMWARE_VERSION = 0x28;
+static const uint8_t EXTENDED_HW_CMD_CAPABILITIES = 0x7E;
+static const uint8_t EXTENDED_HW_CMD_API_VERSION = 0x7B;
 
-static const char EXTENDED_HW_CMD_SET_FREQUENCY = 0xEA;
-static const char EXTENDED_HW_CMD_RESTORE_FREQUENCY = 0xEB;
+static const uint8_t EXTENDED_HW_CMD_SET_FREQUENCY = 0xEA;
+static const uint8_t EXTENDED_HW_CMD_RESTORE_FREQUENCY = 0xEB;
 
-static const char EXTENDED_HW_CMD_START_SCAN = 0xEC;
-static const char EXTENDED_HW_CMD_STOP_SCAN = 0xED;
-static const char EXTENDED_HW_CMD_FOUND_DEVICE = 0xEE;
-static const char EXTENDED_HW_CMD_PAIR_WITH_DEVICE = 0xEF;
-static const char EXTENDED_HW_CMD_CLEAR_PAIRED_DEVICE = 0xF0;
-static const char EXTENDED_HW_CMD_GET_PAIRED_DEVICE = 0xF1;
-static const char EXTENDED_HW_CMD_SET_RIG_CTRL = 0xF2;
-static const char EXTENDED_HW_CMD_FACTORY_RESET = 0xF3;
+static const uint8_t EXTENDED_HW_CMD_START_SCAN = 0xEC;
+static const uint8_t EXTENDED_HW_CMD_STOP_SCAN = 0xED;
+static const uint8_t EXTENDED_HW_CMD_FOUND_DEVICE = 0xEE;
+static const uint8_t EXTENDED_HW_CMD_PAIR_WITH_DEVICE = 0xEF;
+static const uint8_t EXTENDED_HW_CMD_CLEAR_PAIRED_DEVICE = 0xF0;
+static const uint8_t EXTENDED_HW_CMD_GET_PAIRED_DEVICE = 0xF1;
+static const uint8_t EXTENDED_HW_CMD_SET_RIG_CTRL = 0xF2;
+static const uint8_t EXTENDED_HW_CMD_FACTORY_RESET = 0xF3;
 
 enum extended_hw_action_t : uint8_t
 {
@@ -64,9 +68,9 @@ public:
   KISSInterceptor();
   bool extractExtendedHardwareCommand(uint8_t *buffer, size_t size, extended_hw_cmd_t *cmd);
   bool escape(uint8_t *buffer, size_t size, uint8_t *result, size_t *resultSize);
+  bool unescape(uint8_t *buffer, size_t size, uint8_t *unescapedBuffer, size_t *unescapedSize);
 
 private:
-  bool unescape(uint8_t *buffer, size_t size, uint8_t *unescapedBuffer, size_t *unescapedSize);
 };
 
 #endif

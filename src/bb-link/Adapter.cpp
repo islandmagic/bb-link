@@ -1,3 +1,4 @@
+#include <ArduinoLog.h>
 #include "Adapter.h"
 
 #define IDLE_TIME_TO_SLEEP 5 * 60 * 1000          // 5 min, time before shutting down when neither devices are connected
@@ -13,6 +14,8 @@
 #define SERVICE_UUID_OTA "1A68D2B0-C2E4-453F-A2BB-B659D66CF442"
 #define CHARACTERISTIC_UUID_OTA_FLASH "1A68D2B1-C2E4-453F-A2BB-B659D66CF442"
 #define CHARACTERISTIC_UUID_OTA_IDENTITY "1A68D2B2-C2E4-453F-A2BB-B659D66CF442"
+
+extern const char *logLevels[];
 
 // AdapterState
 Adapter::Adapter() : idleState(
@@ -56,10 +59,8 @@ Adapter::Adapter() : idleState(
 
 void Adapter::init()
 {
-  Serial.println("Adapter: init");
+  Log.traceln("Adapter: init");
   pinMode(VBUS_SENSE_GPIO, INPUT);
-
-  Serial.printf("Adapter: board hardware %i, version %i.%i, firmware %i.%i.%i\n", HARDWARE_BOARD, HARDWARE_VERSION_MAJOR, HARDWARE_VERSION_MINOR, FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH);
 
   statusIndicator.init();
   touchButton.init();
@@ -73,7 +74,7 @@ void Adapter::init()
 
   if (!bridge.init())
   {
-    Serial.println("FATAL: Bridge init failed !!!!!");
+    Log.fatalln("FATAL: Bridge init failed !!!!!");
     statusIndicator.set(error);
     while (true)
     {
@@ -90,7 +91,7 @@ void Adapter::init()
 
 void Adapter::verifyFirmware()
 {
-  Serial.println("Checking firmware...");
+  Log.traceln("Checking firmware...");
   const esp_partition_t *running = esp_ota_get_running_partition();
   esp_ota_img_states_t ota_state;
   if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK)
@@ -101,29 +102,29 @@ void Adapter::verifyFirmware()
                            : ota_state == ESP_OTA_IMG_INVALID        ? "ESP_OTA_IMG_INVALID"
                            : ota_state == ESP_OTA_IMG_ABORTED        ? "ESP_OTA_IMG_ABORTED"
                                                                      : "ESP_OTA_IMG_UNDEFINED";
-    Serial.printf("OTA state: %s\n", otaState);
+    Log.infoln("OTA state: %s", otaState);
 
     if (ota_state == ESP_OTA_IMG_PENDING_VERIFY)
     {
       if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK)
       {
-        Serial.println("App is valid, rollback cancelled successfully");
+        Log.infoln("App is valid, rollback cancelled successfully");
       }
       else
       {
-        Serial.println("Failed to cancel rollback");
+        Log.errorln("Failed to cancel rollback");
       }
     }
   }
   else
   {
-    Serial.println("OTA partition has no record in OTA data");
+    Log.warningln("OTA partition has no record in OTA data");
   }
 }
 
 void Adapter::initBLEOtaService()
 {
-  Serial.println("Adapter: init BLE OTA service");
+  Log.traceln("Adapter: init BLE OTA service");
 
   // Create the BLE Service for OTA
   BLEService *pOtaService = bridge.getBLEServer()->createService(SERVICE_UUID_OTA);
@@ -189,10 +190,10 @@ void Adapter::lowBatteryWatchguard()
   {
     lastBatteryCheck = now;
     float level = tp.GetBatteryVoltage();
-    Serial.printf("Battery voltage %.3f V\n", level);
+    Log.infoln("Battery voltage %F V", level);
     if (level < BATTERY_MIN_VOLTAGE)
     {
-      Serial.println("Voltage too low, initiating shutdown");
+      Log.warningln("Voltage too low, initiating shutdown");
       shutdownReason = lowBattery;
       adapterStateMachine.transitionTo(shutdownState);
     }
@@ -202,12 +203,17 @@ void Adapter::lowBatteryWatchguard()
 
 bool Adapter::isUSBPower()
 {
+#if defined(ARDUINO_TINYPICO)
+  // TinyPICO has a resistor divider on USB power line
   return (digitalRead(VBUS_SENSE_GPIO) != 0);
+#else
+  return true;
+#endif
 }
 
 void Adapter::doShutdown()
 {
-  Serial.println("Going to deep sleep...");
+  Log.infoln("Going to deep sleep...");
   bridge.disconnect();
   statusIndicator.sleep();
   esp_deep_sleep_start();
@@ -218,7 +224,7 @@ void Adapter::doShutdown()
 */
 void Adapter::onLongPressed()
 {
-  Serial.println("Long pressed button, shutdown");
+  Log.infoln("Long pressed button, shutdown");
   shutdownReason = userInitiated;
   statusIndicator.set(actionRegistered);
   unsigned long now = millis();
@@ -232,11 +238,11 @@ void Adapter::onLongPressed()
 
 void Adapter::onShortPressed()
 {
-  Serial.println("Short pressed button");
+  Log.infoln("Short pressed button");
   // Only show status when idle
   if (adapterStateMachine.isInState(idleState))
   {
-    Serial.println("Showing battery status");
+    Log.infoln("Showing battery status");
     adapterStateMachine.transitionTo(showBatteryState);
   }
 }
@@ -250,7 +256,7 @@ void Adapter::onWrite(BLECharacteristic *pCharacteristic)
 
   if (!adapterStateMachine.isInState(otaFlashState))
   {
-    Serial.println("OTA: begin flash");
+    Log.infoln("OTA: begin flash");
     adapterStateMachine.immediateTransitionTo(otaFlashState);
     esp_ota_begin(esp_ota_get_next_update_partition(NULL), OTA_SIZE_UNKNOWN, &otaHandle);
   }
@@ -258,21 +264,21 @@ void Adapter::onWrite(BLECharacteristic *pCharacteristic)
   if (rxData.length() > 0)
   {
     esp_ota_write(otaHandle, rxData.c_str(), rxData.length());
-    Serial.printf("OTA: written %i bytes\n", rxData.length());
+    Log.infoln("OTA: written %i bytes", rxData.length());
   }
   else
   {
-    Serial.println("OTA: end flash");
+    Log.infoln("OTA: end flash");
     esp_ota_end(otaHandle);
     if (esp_ota_set_boot_partition(esp_ota_get_next_update_partition(NULL)) == ESP_OK)
     {
-      Serial.println("OTA: success, rebooting");
+      Log.infoln("OTA: success, rebooting");
       delay(2000);
       esp_restart();
     }
     else
     {
-      Serial.println("OTA: failed");
+      Log.errorln("OTA: failed");
     }
     adapterStateMachine.transitionTo(idleState);
   }
@@ -280,7 +286,7 @@ void Adapter::onWrite(BLECharacteristic *pCharacteristic)
 
 void Adapter::onRead(BLECharacteristic *pCharacteristic)
 {
-  Serial.println("OTA: onRead!!!!");
+  Log.errorln("OTA: onRead!!!!");
 }
 
 /*
@@ -288,7 +294,7 @@ void Adapter::onRead(BLECharacteristic *pCharacteristic)
 */
 void Adapter::idleEnter()
 {
-  Serial.println("Adapter: idle");
+  Log.traceln("Adapter: idle");
   statusIndicator.set(disconnected);
 }
 
@@ -317,18 +323,18 @@ void Adapter::idleUpdate()
   unsigned int idleTime = adapterStateMachine.timeInCurrentState();
   if (idleTime > IDLE_TIME_TO_SLEEP)
   {
-    Serial.printf("Idle for %i s\n", idleTime / 1000);
+    Log.infoln("Idle for %i s", idleTime / 1000);
 
     // Do not auto shutdown when on USB power
     if (isUSBPower())
     {
-      Serial.println("On USB power, stay awake");
+      Log.infoln("On USB power, stay awake");
       // Reset the time in state
       adapterStateMachine.transitionTo(idleState);
     }
     else
     {
-      Serial.println("On battery power, initiating shutdown");
+      Log.infoln("On battery power, initiating shutdown");
       shutdownReason = idleTimeout;
       adapterStateMachine.transitionTo(shutdownState);
     }
@@ -340,9 +346,25 @@ void Adapter::idleUpdate()
     switch (ch)
     {
     case 'R':
-      Serial.println("Perform factory reset");
+      Log.warningln("Perform factory reset");
       bridge.factoryReset();
       adapterStateMachine.transitionTo(idleState);
+      break;
+    case 'v':
+      // Decrease log verbosity by one level
+      if (Log.getLevel() > LOG_LEVEL_SILENT)
+      {
+        Log.setLevel(Log.getLevel() - 1);
+      }
+      Serial.printf("Log level: %s\n", logLevels[Log.getLevel()]);
+      break;
+    case 'V':
+      // Increase log verbosity by one level
+      if (Log.getLevel() < LOG_LEVEL_VERBOSE)
+      {
+        Log.setLevel(Log.getLevel() + 1);
+      }
+      Serial.printf("Log level: %s\n", logLevels[Log.getLevel()]);
       break;
     }
   }
@@ -354,7 +376,7 @@ void Adapter::idleExit()
 
 void Adapter::inUseEnter()
 {
-  Serial.println("Adapter: ready for use");
+  Log.traceln("Adapter: ready for use");
   statusIndicator.set(ready);
 }
 
@@ -378,7 +400,7 @@ void Adapter::inUseExit()
 
 void Adapter::shutdownEnter()
 {
-  Serial.println("Adapter: shutdown");
+  Log.traceln("Adapter: shutdown");
   switch (shutdownReason)
   {
   case userInitiated:
@@ -408,7 +430,7 @@ void Adapter::showBatteryEnter()
 {
 #if defined(ARDUINO_TINYPICO)
   float level = tp.GetBatteryVoltage();
-  Serial.printf("Battery voltage %.3f V\n", level);
+  Log.infoln("Battery voltage %F V", level);
   if (level > BATTERY_FULL_VOLTAGE)
   {
     statusIndicator.set(batteryFull);
@@ -434,7 +456,7 @@ void Adapter::showBatteryExit()
 
 void Adapter::otaFlashEnter()
 {
-  Serial.println("Adapter: OTA flash");
+  Log.traceln("Adapter: OTA flash");
   statusIndicator.set(otaFlash);
   bridge.disconnect();
 }

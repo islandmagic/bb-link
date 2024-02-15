@@ -1,3 +1,4 @@
+#include <ArduinoLog.h>
 #include "Bridge.h"
 #include "Adapter.h"
 #include <map>
@@ -25,7 +26,7 @@ extern Adapter adapter;
 
 void connectToBluetooth(void *address)
 {
-  Serial.println("BTC: connecting to Bluetooth Classic interface");
+  Log.traceln("BTC: connecting to Bluetooth Classic interface");
   adapter.bridge.btSerial.connect((uint8_t *)address, 0, ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER);
   vTaskDelete(NULL);
 }
@@ -74,7 +75,7 @@ Bridge::Bridge(String adapterName) : bleDisconnectedState(
 
 bool Bridge::init()
 {
-  Serial.println("Bridge: init");
+  Log.traceln("Bridge: init");
   rxLingerUntil = millis();
   txLingerUntil = millis();
 
@@ -82,7 +83,7 @@ bool Bridge::init()
   useRigControl = preferences.getBool(PREF_RIG_CTRL, true);
   preferences.end();
 
-  Serial.printf("Use rig control: %s\n", useRigControl ? "true" : "false");
+  Log.infoln("Use rig control: %s", useRigControl ? "true" : "false");
 
   bool ok = initBTC();
   if (ok)
@@ -104,7 +105,7 @@ void Bridge::perform()
   // Process any command received from BLE
   while (!cmdQueue.isEmpty())
   {
-    Serial.println("BLE: dequeueing extended hardware command");
+    Log.traceln("BLE: dequeueing extended hardware command");
     processingCmdQueue = true;
     extended_hw_cmd_t cmd = cmdQueue.dequeue();
     processExtendedHardwareCommand(&cmd);
@@ -121,7 +122,7 @@ void Bridge::perform()
     // Send data to BLE
     if (rxLen > 0)
     {
-      Serial.printf("BLE < BTC: %i\n", rxLen);
+      Log.infoln("BLE < BTC: %i", rxLen);
       setRxLinger(BYTE_TRANSMIT_TIME * rxLen);
       pRx->setValue(rxBuf, rxLen);
       pRx->notify();
@@ -167,7 +168,7 @@ bool Bridge::btcDiscovery()
 
 bool Bridge::initBTC()
 {
-  Serial.println("Bridge: initBTC");
+  Log.traceln("Bridge: initBTC");
   btSerial.enableSSP();
   btSerial.setPin("0000");
 
@@ -179,7 +180,7 @@ bool Bridge::initBTC()
 
   if (!btSerial.begin(adapterName, true))
   {
-    Serial.println("FATAL: BTC init failed !!!!!");
+    Log.fatalln("FATAL: BTC init failed !!!!!");
     return false;
   }
   else
@@ -200,7 +201,7 @@ bool Bridge::isRx()
 
 bool Bridge::initBLE()
 {
-  Serial.println("Bridge: initBLE");
+  Log.traceln("Bridge: initBLE");
 
   BLEDevice::init(ADAPTER_NAME);
   pBLEServer = BLEDevice::createServer();
@@ -269,12 +270,12 @@ void Bridge::lookUpLastPairedDevice()
 
   if (!count)
   {
-    Serial.println("No paired device found");
+    Log.infoln("No paired device found");
     clearStoredPairedDeviceInfo();
   }
   else
   {
-    Serial.printf("Found %i paired device\n", count);
+    Log.infoln("Found %i paired device", count);
     if (PAIR_MAX_DEVICES < count)
     {
       count = PAIR_MAX_DEVICES;
@@ -286,7 +287,7 @@ void Bridge::lookUpLastPairedDevice()
     {
       for (int i = 0; i < count; i++)
       {
-        Serial.printf("Device %i, address: %s", i, BTAddress(pairedDeviceBtAddr[i]).toString().c_str());
+        Log.infoln("Device %i, address: %s", i, BTAddress(pairedDeviceBtAddr[i]).toString().c_str());
 
         // Normally there should only be one paired device at a time. Check the address matches
         // what was stored in preferences.
@@ -299,7 +300,7 @@ void Bridge::lookUpLastPairedDevice()
         // Check if address match
         if (BTAddress(radioAddress).equals(BTAddress(pairedDeviceBtAddr[i])))
         {
-          Serial.printf("Found paired device name: %s\n", radioName);
+          Log.infoln("Found paired device name: %s", radioName);
           memcpy(remoteAddress, pairedDeviceBtAddr[i], ESP_BD_ADDR_LEN);
           strcpy(remoteName, radioName.c_str());
           connectToPairedDevice = true;
@@ -307,7 +308,7 @@ void Bridge::lookUpLastPairedDevice()
         }
         else
         {
-          Serial.printf("Found paired device name does not match saved, name: %s address: %s\n", radioName, BTAddress(radioAddress).toString().c_str());
+          Log.infoln("Found paired device name does not match saved, name: %s address: %s", radioName, BTAddress(radioAddress).toString().c_str());
           clearPairedDevices();
           break;
         }
@@ -338,15 +339,15 @@ void Bridge::clearPairedDevices()
   clearStoredPairedDeviceInfo();
   clearRemoteDeviceInfo();
 
-  Serial.println("Clear paired devices");
+  Log.traceln("Clear paired devices");
 
   if (!count)
   {
-    Serial.println("No paired device found");
+    Log.infoln("No paired device found");
   }
   else
   {
-    Serial.printf("Found %i paired device(s)\n", count);
+    Log.infoln("Found %i paired device(s)", count);
     if (PAIR_MAX_DEVICES < count)
     {
       count = PAIR_MAX_DEVICES;
@@ -358,16 +359,16 @@ void Bridge::clearPairedDevices()
     {
       for (int i = 0; i < count; i++)
       {
-        Serial.printf("Device %i, address: %s\n", i, BTAddress(pairedDeviceBtAddr[i]).toString().c_str());
+        Log.infoln("Device %i, address: %s", i, BTAddress(pairedDeviceBtAddr[i]).toString().c_str());
 
         esp_err_t tError = esp_bt_gap_remove_bond_device(pairedDeviceBtAddr[i]);
         if (ESP_OK == tError)
         {
-          Serial.println("Removed paired device");
+          Log.traceln("Removed paired device");
         }
         else
         {
-          Serial.println("Failed to remove paired device");
+          Log.errorln("Failed to remove paired device");
         }
       }
     }
@@ -402,29 +403,28 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   {
     if (useRigControl)
     {
-      Serial.println("BTC: executing extended_hw_set_frequency");
+      Log.traceln("BTC: extended_hw_set_frequency");
       previousFrequency = 0;
 
       if (vfo != vfoUnknown)
       {
         if (thd7x.isKISSMode())
         {
-          Serial.println("BTC: exiting KISS mode first");
+          Log.infoln("BTC: exiting KISS mode first");
           thd7x.exitKISS();
         }
 
-        Serial.printf("BTC: try to set frequency: %d\n", cmd->data.uint32);
+        Log.infoln("BTC: try to set frequency: %d", cmd->data.uint32);
 
         if (thd7x.getFrequency(vfo, &previousFrequency))
         {
-          Serial.print("BTC: previousFrequency: ");
-          Serial.println(previousFrequency);
+          Log.infoln("BTC: previousFrequency: %l", previousFrequency);
           thd7x.setFrequency(vfo, cmd->data.uint32);
         }
         else
         {
           previousFrequency = 0;
-          Serial.println("BTC: failed to get previousFrequency");
+          Log.errorln("BTC: failed to get previousFrequency");
         }
 
         // Show time
@@ -432,7 +432,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
       }
       else
       {
-        Serial.println("BTC: VFO is unknown! Cowardly refusing to set frequency");
+        Log.warningln("BTC: VFO is unknown! Cowardly refusing to set frequency");
       }
     }
     break;
@@ -441,17 +441,17 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   {
     if (useRigControl)
     {
-      Serial.println("BTC: executing extended_hw_restore_frequency");
+      Log.traceln("BTC: extended_hw_restore_frequency");
 
       if (vfo != vfoUnknown && previousFrequency > 0)
       {
         if (thd7x.isKISSMode())
         {
-          Serial.println("BTC: exiting KISS mode first");
+          Log.infoln("BTC: exiting KISS mode first");
           thd7x.exitKISS();
         }
 
-        Serial.printf("BTC: try to restore frequency to %i\n", previousFrequency);
+        Log.infoln("BTC: try to restore frequency to %i", previousFrequency);
         thd7x.setFrequency(vfo, previousFrequency);
         previousFrequency = 0;
 
@@ -460,26 +460,26 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
       }
       else
       {
-        Serial.println("BTC: no previous frequency to restore");
+        Log.infoln("BTC: no previous frequency to restore");
       }
     }
     break;
   }
   case extended_hw_start_scan:
   {
-    Serial.println("BTC: executing extended_hw_start_scan");
+    Log.traceln("BTC: extended_hw_start_scan");
     btcStateMachine.transitionTo(btcDiscoveryState);
     break;
   }
   case extended_hw_stop_scan:
   {
-    Serial.println("BTC: executing extended_hw_stop_scan");
+    Log.traceln("BTC: extended_hw_stop_scan");
     btcStateMachine.transitionTo(btcDisconnectedState);
     break;
   }
   case extended_hw_pair_with_device:
   {
-    Serial.println("BTC: executing extended_hw_pair_with_device");
+    Log.traceln("BTC: extended_hw_pair_with_device");
     btSerial.disconnect();
     clearPairedDevices();
 
@@ -491,7 +491,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
       BTAdvertisedDevice *device = btDeviceList->getDevice(i);
       if (device->getAddress().equals(BTAddress(cmd->data.bytes)))
       {
-        Serial.printf("BTC: Pairing with: %s %s\n", device->getName().c_str(), device->getAddress().toString().c_str());
+        Log.infoln("BTC: Pairing with: %s %s", device->getName().c_str(), device->getAddress().toString().c_str());
         memcpy(remoteAddress, device->getAddress().getNative(), sizeof(esp_bd_addr_t));
         strcpy(remoteName, device->getName().c_str());
         connectToPairedDevice = true;
@@ -504,20 +504,20 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   }
   case extended_hw_clear_paired_device:
   {
-    Serial.println("BTC: executing extended_hw_clear_paired_device");
+    Log.traceln("BTC: extended_hw_clear_paired_device");
     btSerial.disconnect();
     clearPairedDevices();
     break;
   }
   case extended_hw_api_version:
   {
-    Serial.println("BTC: executing extended_hw_api_version");
+    Log.traceln("BTC: extended_hw_api_version");
     reply16(EXTENDED_HW_CMD_API_VERSION, API_VERSION);
     break;
   }
   case extended_hw_firmware_version:
   {
-    Serial.println("BTC: executing extended_hw_firmware_version");
+    Log.traceln("BTC: extended_hw_firmware_version");
     // create period delimited version string
     String version = String(FIRMWARE_VERSION_MAJOR) + "." + String(FIRMWARE_VERSION_MINOR) + "." + String(FIRMWARE_VERSION_PATCH);
     reply(EXTENDED_HW_CMD_FIRMWARE_VERSION, (uint8_t *)version.c_str(), strlen(version.c_str()));
@@ -525,7 +525,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   }
   case extended_hw_capabilities:
   {
-    Serial.println("BTC: executing extended_hw_capabilities");
+    Log.traceln("BTC: extended_hw_capabilities");
     uint16_t caps;
     caps = useRigControl ? CAP_RIG_CTRL : 0 | CAP_FIRMWARE_VERSION;
     reply16(EXTENDED_HW_CMD_CAPABILITIES, caps);
@@ -533,7 +533,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   }
   case extended_hw_get_paired_device:
   {
-    Serial.println("BTC: executing extended_hw_get_paired_device");
+    Log.traceln("BTC: extended_hw_get_paired_device");
     found_device_t paired;
     paired.connected = btcConnected() ? 0x01 : 0x00;
     memcpy(paired.address, remoteAddress, sizeof(esp_bd_addr_t));
@@ -543,15 +543,15 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   }
   case extended_hw_set_rig_ctrl:
   {
-    Serial.println("BTC: executing extended_hw_set_rig_ctrl");
+    Log.traceln("BTC: extended_hw_set_rig_ctrl");
     if (cmd->data.uint8 == 0x00)
     {
-      Serial.println("BTC: set rig control off");
+      Log.infoln("BTC: set rig control off");
       useRigControl = false;
     }
     else
     {
-      Serial.println("BTC: set rig control on");
+      Log.infoln("BTC: set rig control on");
       useRigControl = true;
     }
     preferences.begin(PREFERENCES_NAMESPACE, false);
@@ -561,12 +561,12 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
   }
   case extended_hw_factory_reset:
   {
-    Serial.println("BTC: executing extended_hw_factory_reset");
+    Log.traceln("BTC: extended_hw_factory_reset");
     factoryReset();
     break;
   }
   default:
-    Serial.println("BTC: unknown extended hardware command");
+    Log.errorln("BTC: unknown extended hardware command");
     break;
   }
 }
@@ -600,13 +600,13 @@ void Bridge::reply(uint8_t *response, size_t size)
 
   if (kissInterceptor.escape(response, size, buffer, &bufferSize))
   {
-    Serial.printf("BLE < (adapter): %i\n", bufferSize);
+    Log.infoln("BLE < (adapter): %i", bufferSize);
     pRx->setValue(buffer, bufferSize);
     pRx->notify();
   }
   else
   {
-    Serial.println("Failed to escape response");
+    Log.errorln("Failed to escape response");
   }
 }
 
@@ -615,7 +615,7 @@ void Bridge::reply(uint8_t *response, size_t size)
 */
 void Bridge::onConnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
 {
-  Serial.println("BLE: onConnect");
+  Log.traceln("BLE: onConnect");
 
   esp_ble_conn_update_params_t conn_params = {};
   memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
@@ -631,16 +631,15 @@ void Bridge::onConnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
 
 void Bridge::onDisconnect(BLEServer *pServer)
 {
-  Serial.println("BLE: onDisconnect");
+  Log.traceln("BLE: onDisconnect");
   bleStateMachine.transitionTo(bleDisconnectedState);
 }
 
 void Bridge::onMtuChanged(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
 {
-  Serial.println("BLE: onMtuChanged");
-  Serial.print("New MTU size: ");
+  Log.traceln("BLE: onMtuChanged");
   mtuSize = param->mtu.mtu;
-  Serial.println(mtuSize);
+  Log.infoln("New MTU size: %d", mtuSize);
 }
 
 /*
@@ -652,12 +651,12 @@ void Bridge::onWrite(BLECharacteristic *pCharacteristic)
 
   if (txValue.length() > 0)
   {
-    Serial.printf("BLE Rx: %i\n", txValue.length());
+    Log.traceln("BLE Rx: %i", txValue.length());
 
     extended_hw_cmd_t cmd;
     if (kissInterceptor.extractExtendedHardwareCommand((uint8_t *)pCharacteristic->getData(), txValue.length(), &cmd))
     {
-      Serial.println("BLE: queueing extended hardware command");
+      Log.traceln("BLE: queueing extended hardware command");
       cmdQueue.enqueue(cmd);
     }
     else if (btcStateMachine.isInState(btcConnectedState))
@@ -669,7 +668,7 @@ void Bridge::onWrite(BLECharacteristic *pCharacteristic)
         return;
       }
 
-      Serial.printf("BLE > BTC: %i\n", txValue.length());
+      Log.traceln("BLE > BTC: %i", txValue.length());
       btSerial.write(pCharacteristic->getData(), txValue.length());
       setTxLinger(BYTE_TRANSMIT_TIME * txValue.length());
     }
@@ -678,7 +677,7 @@ void Bridge::onWrite(BLECharacteristic *pCharacteristic)
 
 void Bridge::onRead(BLECharacteristic *pCharacteristic)
 {
-  Serial.println("BLE: onRead!!!!");
+  Log.errorln("BLE: onRead!!!!");
 }
 
 /*
@@ -686,8 +685,7 @@ void Bridge::onRead(BLECharacteristic *pCharacteristic)
 */
 void Bridge::onBTConfirmRequestCallback(uint32_t numVal)
 {
-  Serial.print("Pairing pin: ");
-  Serial.println(numVal);
+  Log.infoln("Pairing pin: %l", numVal);
   btSerial.confirmReply(true);
 }
 
@@ -695,7 +693,7 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
 {
   if (success)
   {
-    Serial.println("Pairing success");
+    Log.infoln("Pairing success");
     /*
       Save the name and address of the radio we just paired
       This so we can connect to it next time we start the device and
@@ -708,7 +706,7 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
   }
   else
   {
-    Serial.println("Pairing failed, rejected by user");
+    Log.warningln("Pairing failed, rejected by user");
   }
 }
 
@@ -717,11 +715,11 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
 */
 void Bridge::btcDisconnectedEnter()
 {
-  Serial.println("BTC: disconnected");
+  Log.infoln("BTC: disconnected");
   if (connectToPairedDevice)
   {
     // The connect method in BT serial is blocking. Use a task to connect
-    Serial.printf("BTC: attempt to connect to %s at %s\n", remoteName, BTAddress(remoteAddress).toString().c_str());
+    Log.infoln("BTC: attempt to connect to %s at %s", remoteName, BTAddress(remoteAddress).toString().c_str());
     xTaskCreate(
         connectToBluetooth,    // Task function
         "connectBT",           // Task name
@@ -753,7 +751,7 @@ void Bridge::btcDisconnectedExit()
 
 void Bridge::btcConnectedEnter()
 {
-  Serial.println("BTC: connected");
+  Log.infoln("BTC: connected");
   clearAllPendingBTCData();
 }
 
@@ -771,13 +769,13 @@ void Bridge::btcConnectedExit()
 
 void Bridge::btcDiscoveryEnter()
 {
-  Serial.println("BTC: discovery");
+  Log.traceln("BTC: discovery");
   btSerial.disconnect();
 
   btDeviceList = btSerial.getScanResults();
   if (btSerial.discoverAsync([this](BTAdvertisedDevice *pDevice)
                              {
-    Serial.printf("Found device: %s\n", pDevice->toString().c_str());
+    Log.infoln("Found device: %s", pDevice->toString().c_str());
     /*
     Name: TH-D74, Address: 04:ee:03:61:2d:b0, cod: 0x620204, rssi: -55
     Name: TNC4 Mobilinkd, Address: 34:81:f4:aa:b2:dd, cod: 0x4c0300, rssi: -24
@@ -795,11 +793,11 @@ void Bridge::btcDiscoveryEnter()
       reply(EXTENDED_HW_CMD_FOUND_DEVICE, reinterpret_cast<uint8_t *>(&found), 1 + sizeof(esp_bd_addr_t) + strlen(found.name));
     } }))
   {
-    Serial.println("BTC: started scan");
+    Log.traceln("BTC: started scan");
   }
   else
   {
-    Serial.println("BTC: failed to start scan");
+    Log.errorln("BTC: failed to start scan");
   }
 }
 
@@ -821,7 +819,7 @@ void Bridge::btcDiscoveryExit()
 
 void Bridge::bleDisconnectedEnter()
 {
-  Serial.println("BLE: disconnected");
+  Log.infoln("BLE: disconnected");
   startAdvertisingBLE();
 }
 
@@ -836,7 +834,7 @@ void Bridge::bleDisconnectedExit()
 
 void Bridge::bleConnectedEnter()
 {
-  Serial.println("BLE: Connected");
+  Log.infoln("BLE: connected");
   clearAllPendingBTCData();
 
   if (useRigControl)
@@ -849,7 +847,7 @@ void Bridge::bleConnectedEnter()
     {
       if (thd7x.isKISSMode())
       {
-        Serial.println("BLE: already in KISS mode");
+        Log.traceln("BLE: already in KISS mode");
         previousTNCMode = tncKISS;
         thd7x.exitKISS();
       }
@@ -858,10 +856,8 @@ void Bridge::bleConnectedEnter()
       tnc_mode_t mode;
       if (thd7x.getTNC(&vfo, &mode))
       {
-        Serial.print("BLE: vfo: ");
-        Serial.println(vfo);
-        Serial.print("BLE: mode: ");
-        Serial.println(mode);
+        Log.infoln("BLE: vfo: %d", vfo);
+        Log.infoln("BLE: mode: %d", mode);
 
         if (previousTNCMode == tncUnknown)
         {
@@ -872,7 +868,7 @@ void Bridge::bleConnectedEnter()
       }
       else
       {
-        Serial.println("BLE: failed to get TNC mode!!!");
+        Log.errorln("BLE: failed to get TNC mode!!!");
         vfo = vfoUnknown;
         previousTNCMode = tncUnknown;
       }
@@ -893,10 +889,10 @@ void Bridge::bleConnectedExit()
     {
       if (previousTNCMode != tncKISS && previousTNCMode != tncUnknown && vfo != vfoUnknown)
       {
-        Serial.println("BLE: restoring initial KISS mode");
+        Log.traceln("BLE: restoring initial KISS mode");
         if (thd7x.isKISSMode())
         {
-          Serial.println("BLE: exiting KISS mode first");
+          Log.traceln("BLE: exiting KISS mode first");
           thd7x.exitKISS();
         }
         thd7x.setTNC(vfo, previousTNCMode);
