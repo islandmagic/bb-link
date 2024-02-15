@@ -1,10 +1,10 @@
 #include <ArduinoLog.h>
 #include "KISSInterceptor.h"
 
-static const char FEND = 0xC0;
-static const char FESC = 0xDB;
-static const char TFEND = 0xDC;
-static const char TFESC = 0xDD;
+static const uint8_t FEND = 0xC0;
+static const uint8_t FESC = 0xDB;
+static const uint8_t TFEND = 0xDC;
+static const uint8_t TFESC = 0xDD;
 
 KISSInterceptor::KISSInterceptor()
 {
@@ -24,7 +24,6 @@ bool KISSInterceptor::extractExtendedHardwareCommand(uint8_t *buffer, size_t siz
       }
 
       Log.traceln("Found SET HW KISS frame start at index %d", i);
-
       // Look for frame end
       for (int j = i + 1; j < size; j++)
       {
@@ -141,7 +140,7 @@ bool KISSInterceptor::unescape(uint8_t *buffer, size_t size, uint8_t *result, si
 {
   uint8_t *src = buffer;
   uint8_t *dst = result;
-  for (int i = 0; i < size; i++)
+  while(src < buffer + size)
   {
     if (*src == FESC)
     {

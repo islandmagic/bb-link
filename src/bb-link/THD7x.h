@@ -2,7 +2,11 @@
 #ifndef THD7x_H
 #define THD7x_H
 
+#ifndef EPOXY_DUINO
 #include "BluetoothSerial.h"
+#else
+#include "MockBluetoothSerial.h"
+#endif
 
 enum vfo_t : int
 {
@@ -22,7 +26,7 @@ enum tnc_mode_t : int
 class THD7x
 {
   public:
-    THD7x(BluetoothSerial btSerial);
+    THD7x(BluetoothSerial &btSerial);
 
     void setFrequency(vfo_t vfo, uint32_t frequency);
     bool getFrequency(vfo_t vfo, uint32_t *frequency);
@@ -35,9 +39,10 @@ class THD7x
     void exitKISS();
     bool isKISSMode();
 
-  private:
-    BluetoothSerial btSerial;
     bool sendCmd(const char *command, char *response, size_t len, int retry=3);
+
+  private:
+    BluetoothSerial &btSerial;
 };
 
 #endif

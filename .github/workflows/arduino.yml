@@ -39,6 +39,7 @@ jobs:
           arduino-cli lib install "FreeRTOS"@11.0.1-2
           arduino-cli lib install "ArduinoQueue"@1.2.5
           arduino-cli lib install "ArduinoLog"@1.1.1
+          arduino-cli lib install "AUnit"@1.7.1
       - name: Compile
         run: |
           arduino-cli compile --fqbn ${{matrix.arduino-board}} --export-binaries src/bb-link/bb-link.ino

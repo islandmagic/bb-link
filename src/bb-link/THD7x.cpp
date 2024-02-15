@@ -6,7 +6,7 @@
 */
 #define CMD_BUFFER_SIZE 32
 
-THD7x::THD7x(BluetoothSerial btSerial)
+THD7x::THD7x(BluetoothSerial &btSerial)
   : btSerial(btSerial) {
 }
 
