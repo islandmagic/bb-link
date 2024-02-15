@@ -53,3 +53,4 @@ Thumbs.db
 src/bb-link/build/
 
 *.o
+*.out
