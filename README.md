@@ -133,6 +133,10 @@ Alternatively, you can reset the adapter by connecting it to a computer. Here's 
 1. Monitor the response in the Serial Monitor which will confirm the clearing of the previously paired devices.
 1. After the process is complete, disconnect the adapter from your PC.
 
+### Troubleshooting
+
+* If the adapter connects to the radio but the radio does not transmit, check the TNC settings. Go to Menu > Configuration > Interface > KISS (983) and set it to Bluetooth.
+
 ### Known Issues
 
 1. The ESP32 library is limited to discovering Bluetooth Classic devices exclusively prior to establishing any connections. After connecting with a device, the discovery capability is no longer available. To initiate a new scan, the adapter must be rebooted. If you intend to pair with a different radio, ensure that the radio previously paired with is turned off before powering on the adapter. If not, the adapter will automatically re-establish a connection with the previously paired radio, preventing it from discovering new radios.
