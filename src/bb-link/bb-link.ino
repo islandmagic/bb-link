@@ -20,8 +20,10 @@ Adapter adapter = Adapter();
 
 void setup()
 {
+  // Slow down to save power
+  setCpuFrequencyMhz(80); // 240, 160, 80
+
   Serial.begin(115200);
-  while(!Serial && !Serial.available()){}
   delay(1000);
 
   // LOG_LEVEL_FATAL, LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_INFO, LOG_LEVEL_TRACE, LOG_LEVEL_VERBOSE
@@ -37,6 +39,7 @@ void setup()
   Serial.printf("Heap free: %d, usage: %d %%\n", ESP.getFreeHeap(), 100 - (ESP.getFreeHeap() * 100) / ESP.getHeapSize());
   // ESP.getFreeSketchSpace() returns the total sketch space
   Serial.printf("Flash size: %d, total: %d, usage: %d %%\n", ESP.getSketchSize(), ESP.getFreeSketchSpace(), (ESP.getSketchSize() * 100) / ESP.getFreeSketchSpace());
+  Serial.printf("CPU clock: %d Mhz\n", getCpuFrequencyMhz());
   Serial.printf("Log level: %s\n", logLevels[Log.getLevel()]);
 
   adapter.init();
