@@ -2,7 +2,7 @@
 
 Some devices, like the Kenwood TH-D74 radio only support Bluetooth Classic serial profile. iOS devices only support Bluetooth Low Energy (BLE). They are not compatible and as such, you can't pair those devices together. This code provides a way to create an adapter that can interface a device that exposes a serial profile over Bluetooth Classic, to an iOS device via BLE. Its main purpose is to enable iOS app that supports AX.25 packet like RadioMail or APRS.fi to use the TNC built in the radio as a modem.
 
-For a detailed "how-to build" this adapter, watch this video: https://www.youtube.com/watch?v=xLze6qDOLww
+For a detailed "how-to build" this adapter, watch this video: https://www.youtube.com/watch?v=xLze6qDOLww. After you're done, come back and follow the instructions here as they are continually updated.
 
 ## Hardware
 
@@ -14,16 +14,32 @@ The adapter is based on the ESP32 microcontroller, which provides support for bo
 
 1. TinyPICO [Buy](https://unexpectedmaker.com/shop.html#!/TinyPICO/p/577111313/category=154494282)
 2. 600 mAh LiPo Battery model 602248 (6x22x48mm) [Buy](https://www.aliexpress.us/item/2251832520607268.html)
-3. 3D Printed [Case](https://github.com/islandmagic/bb-link/tree/master/enclosure)
+3. 3D Printed case
 4. Brad fastener as touch button (8mm head)
 
 ### Power Options
 
-The adapter can be powered via USB, such as through a USB adapter or a portable power bank, or alternatively, it can be connected to a LiPo battery for use on the go.
+The adapter can be powered via USB, such as through a USB adapter or a portable power bank, or alternatively, it can be connected to a LiPo battery for use on the go. The TinyPICO will charge the battery when plugged into USB.
 
 ### Capacitive Touch Button
 
 The installation of a capacitive touch button is not required but recommended if you need an on/off switch while using a LiPo battery. To install, connect a wire to pin number 4 on the TinyPICO board; this will serve as the on/off control.
+
+### Cases
+
+You can 3D print a case to house the battery and the board. Here are a couple of option that attach via the mounting holes for the belt clip.
+
+1. Horizontal
+
+This is the orignal design from WH6AZ, functional but primitive. Can work as a stand alone box if you don't feel like attaching to the radio.
+
+https://github.com/islandmagic/bb-link/tree/master/enclosure
+
+2. Vertical
+
+This design is a beautiful contribution from F4LFJ. It features a slick design that allows the case to attach vertically. There is enough clearance to insert and remove the battery from the radio.
+
+https://github.com/islandmagic/bb-link/tree/master/enclosure/contribs/F4LFJ
 
 ## Software
 
@@ -133,15 +149,15 @@ Alternatively, you can reset the adapter by connecting it to a computer. Here's 
 1. Monitor the response in the Serial Monitor which will confirm the clearing of the previously paired devices.
 1. After the process is complete, disconnect the adapter from your PC.
 
-### Troubleshooting
+## Troubleshooting
 
 * If the adapter connects to the radio but the radio does not transmit, check the TNC settings. Go to Menu > Configuration > Interface > KISS (983) and set it to Bluetooth.
 
-### Known Issues
+## Known Issues
 
 1. The ESP32 library is limited to discovering Bluetooth Classic devices exclusively prior to establishing any connections. After connecting with a device, the discovery capability is no longer available. To initiate a new scan, the adapter must be rebooted. If you intend to pair with a different radio, ensure that the radio previously paired with is turned off before powering on the adapter. If not, the adapter will automatically re-establish a connection with the previously paired radio, preventing it from discovering new radios.
 
-### How to Contribute
+## How to Contribute
 
 This project is open source, so everyone's contribution is welcome. Here's a quick guide to get started:
 
