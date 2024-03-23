@@ -345,6 +345,11 @@ void Adapter::idleUpdate()
     char ch = Serial.read();
     switch (ch)
     {
+    case 'r':
+      Log.warningln("Reboot");
+      delay(2000);
+      esp_restart();
+      break;
     case 'R':
       Log.warningln("Perform factory reset");
       bridge.factoryReset();
