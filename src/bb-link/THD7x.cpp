@@ -90,7 +90,7 @@ bool THD7x::sendCmd(const char *cmd, char *response, size_t responseLen, int ret
   btSerial.print(cmd);
   btSerial.print("\r");
   btSerial.flush();
-  btSerial.setTimeout(500);
+  btSerial.setTimeout(1000);
   size_t lenRead = btSerial.readBytesUntil('\r', response, responseLen - 1);
   if (lenRead == 0) {
     Log.infoln("No response from command %s", cmd);
@@ -100,7 +100,7 @@ bool THD7x::sendCmd(const char *cmd, char *response, size_t responseLen, int ret
     Log.warningln("Error response from command %s", cmd);
     if (retry--) {
       Log.infoln("Retry attempt left %i", retry);
-      delay(100);
+      delay(200);
       return sendCmd(cmd, response, responseLen, retry);
     } else {
       Log.warningln("No more retries");
