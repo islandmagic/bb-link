@@ -75,6 +75,7 @@ void THD7x::exitKISS() {
   for (unsigned char byte : exitKISSSequence) {
     btSerial.write(byte);
   }
+  btSerial.flush();
 }
 
 bool THD7x::isKISSMode() {

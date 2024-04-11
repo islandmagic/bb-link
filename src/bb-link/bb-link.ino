@@ -28,6 +28,7 @@ void setup()
 
   // LOG_LEVEL_FATAL, LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_INFO, LOG_LEVEL_TRACE, LOG_LEVEL_VERBOSE
   Log.begin(LOG_LEVEL_INFO, &Serial);
+  Log.setPrefix(logPrintPrefix);
 
   Serial.println("\n ___   ___     _    _      _");
   Serial.println("| _ ) | _ )   | |  (_)_ _ | |__");
@@ -48,4 +49,50 @@ void setup()
 void loop()
 {
   adapter.perform();
+}
+
+void logPrintPrefix(Print* _logOutput, int logLevel)
+{
+  logPrintSetColor(_logOutput, logLevel);
+  logPrintTimestamp(_logOutput);
+}
+
+void logPrintSetColor(Print* _logOutput, int logLevel)
+{
+  switch (logLevel)
+  {
+    case LOG_LEVEL_FATAL:
+      _logOutput->print("\033[31m"); // red
+      break;
+    case LOG_LEVEL_ERROR:
+      _logOutput->print("\033[31m"); // red
+      break;
+    case LOG_LEVEL_WARNING:
+      _logOutput->print("\033[33m"); // yellow
+      break;
+    case LOG_LEVEL_INFO:
+      _logOutput->print("\033[0m"); // default
+      break;
+    case LOG_LEVEL_TRACE:
+      _logOutput->print("\033[36m"); // cyan
+  }
+}
+
+void logPrintTimestamp(Print* _logOutput) 
+{
+  const unsigned long MSECS_PER_SEC       = 1000;
+  const unsigned long SECS_PER_MIN        = 60;
+  const unsigned long SECS_PER_HOUR       = 3600;
+  const unsigned long SECS_PER_DAY        = 86400;
+  const unsigned long msecs               =  millis();
+  const unsigned long secs                =  msecs / MSECS_PER_SEC;
+  const unsigned long milliseconds        =  msecs % MSECS_PER_SEC;
+  const unsigned long seconds             =  secs  % SECS_PER_MIN ;
+  const unsigned long minutes             = (secs  / SECS_PER_MIN) % SECS_PER_MIN;
+  const unsigned long hours               = (secs  % SECS_PER_DAY) / SECS_PER_HOUR;
+
+  char timestamp[20];
+  sprintf(timestamp, "%02d:%02d:%02d.%03d ", hours, minutes, seconds, milliseconds);
+
+  _logOutput->print(timestamp);
 }
