@@ -45,7 +45,7 @@ https://github.com/islandmagic/bb-link/tree/master/enclosure/contribs/F4LFJ
 
 1. Install Arduino IDE 2.x [https://www.arduino.cc](https://www.arduino.cc)
 1. Add additional library source in Arduino IDE. Settings > Additional board manager URLs: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-1. Install the esp32 by Espressif Systems board library. This code has been tested with version 2.0.14.
+1. Install the esp32 by Espressif Systems board library. This code has been tested with version 2.0.15.
 1. Install the TinyPICO helper library
 1. Install FreeRTOS library
 1. Install ArduinoQueue library

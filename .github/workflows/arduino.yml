@@ -12,11 +12,11 @@ jobs:
         include:
           - board: tinypico
             arduino-platform: esp32:esp32
-            arduino-platform-version: 2.0.14
+            arduino-platform-version: 2.0.15
             arduino-board: esp32:esp32:tinypico
           - board: pico32
             arduino-platform: esp32:esp32
-            arduino-platform-version: 2.0.14
+            arduino-platform-version: 2.0.15
             arduino-board: esp32:esp32:pico32
     runs-on: ubuntu-latest
     steps:
@@ -36,7 +36,7 @@ jobs:
       - name: Install libraries
         run: |
           arduino-cli lib install "TinyPICO Helper Library"@1.4.0
-          arduino-cli lib install "FreeRTOS"@11.0.1-2
+          arduino-cli lib install "FreeRTOS"@11.0.1-5
           arduino-cli lib install "ArduinoQueue"@1.2.5
           arduino-cli lib install "ArduinoLog"@1.1.1
           arduino-cli lib install "AUnit"@1.7.1
