@@ -122,7 +122,7 @@ void Bridge::perform()
     // Send data to BLE
     if (rxLen > 0)
     {
-      Log.infoln("BLE < BTC: %i", rxLen);
+      Log.traceln("BLE < BTC: %i", rxLen);
       setRxLinger(BYTE_TRANSMIT_TIME * rxLen);
       pRx->setValue(rxBuf, rxLen);
       pRx->notify();
@@ -408,9 +408,13 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
 
       if (vfo != vfoUnknown)
       {
+        // At this point, we should always be in KISS mode. Exit KISS mode first so we don't have to wait for a timeout
+        thd7x.exitKISS();
+
+        // Just to be sure
         if (thd7x.isKISSMode())
         {
-          Log.infoln("BTC: exiting KISS mode first");
+          Log.warningln("BTC: still in KISS mode?");
           thd7x.exitKISS();
         }
 
@@ -445,9 +449,13 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
 
       if (vfo != vfoUnknown && previousFrequency > 0)
       {
+        // Always exit KISS mode first so we don't have to wait for a timeout
+        thd7x.exitKISS();
+
+        // Just to be sure
         if (thd7x.isKISSMode())
         {
-          Log.infoln("BTC: exiting KISS mode first");
+          Log.warningln("BTC: still in KISS mode?");
           thd7x.exitKISS();
         }
 
@@ -663,8 +671,9 @@ void Bridge::onWrite(BLECharacteristic *pCharacteristic)
     {
       // Drop data if we're still processing cmds
       // This is to avoid sending data to the radio while it may not have changed frequency yet
-      if (processingCmdQueue)
+      if (processingCmdQueue || !cmdQueue.isEmpty())
       {
+        Log.traceln("BLE: dropping data while still processing hw commands");
         return;
       }
 
@@ -845,6 +854,10 @@ void Bridge::bleConnectedEnter()
     // Make sure there is a radio to talk to
     if (btcStateMachine.isInState(btcConnectedState))
     {
+      /*
+      * We don't know what TNC mode the radio is in. If the KISS TNC is already on,
+      * we can't send any commands to the radio, so we have to exit it first.
+      */
       if (thd7x.isKISSMode())
       {
         Log.traceln("BLE: already in KISS mode");
@@ -864,11 +877,13 @@ void Bridge::bleConnectedEnter()
           previousTNCMode = mode;
         }
 
+        // As long as BLE is connected, we want the radio to be in KISS mode so application
+        // can send data to the radio
         thd7x.setTNC(vfo, tncKISS);
       }
       else
       {
-        Log.errorln("BLE: failed to get TNC mode!!!");
+        Log.errorln("BLE: failed to get TNC mode and VFO!!!");
         vfo = vfoUnknown;
         previousTNCMode = tncUnknown;
       }
@@ -890,11 +905,17 @@ void Bridge::bleConnectedExit()
       if (previousTNCMode != tncKISS && previousTNCMode != tncUnknown && vfo != vfoUnknown)
       {
         Log.traceln("BLE: restoring initial KISS mode");
+
+        // Always exit KISS mode first so we don't have to wait for a timeout
+        thd7x.exitKISS();
+
+        // Just to be sure
         if (thd7x.isKISSMode())
         {
-          Log.traceln("BLE: exiting KISS mode first");
+          Log.warningln("BLE: still in KISS mode?");
           thd7x.exitKISS();
         }
+
         thd7x.setTNC(vfo, previousTNCMode);
       }
     }
