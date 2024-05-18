@@ -54,3 +54,4 @@ src/bb-link/build/
 
 *.o
 *.out
+sketch.yaml
