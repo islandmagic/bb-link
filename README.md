@@ -1,4 +1,12 @@
-## <br/>👉 [Check out](https://islandmagic.co/products/B-B-Link-Adapter-p629580960?utm_campaign=diy&utm_medium=web&utm_source=github) the new edition that plugs directly into your iPhone 15! 🔥 <br/>&nbsp;
+<hr/>
+<a href="https://islandmagic.co/products/B-B-Link-Adapter-p629580960?utm_campaign=diy&utm_medium=web&utm_source=github">
+              <img src="https://d2j6dbq0eux0bg.cloudfront.net/images/99145778/4295809032" width="30%">
+</a>
+              <br/>
+              <h2>
+              👉 <a href="https://islandmagic.co/products/B-B-Link-Adapter-p629580960?utm_campaign=diy&utm_medium=web&utm_source=github">Check out</a> the new ready-made version that plugs directly into USB-C!
+            </h2>
+<hr/>
 
 # B.B. Link, the BLE to Bluetooth Classic adapter for Kenwood TH-D74/5 Radios
 
