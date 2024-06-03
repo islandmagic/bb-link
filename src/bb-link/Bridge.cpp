@@ -203,7 +203,7 @@ bool Bridge::initBLE()
 {
   Log.traceln("Bridge: initBLE");
 
-  BLEDevice::init(ADAPTER_NAME);
+  BLEDevice::init(adapterName.c_str());
   pBLEServer = BLEDevice::createServer();
   pBLEServer->setCallbacks(this);
 
