@@ -45,7 +45,8 @@ public:
   void disconnect();
   void factoryReset();
   BLEServer * getBLEServer();
-
+  String getAdapterName();
+  
   BluetoothSerial btSerial;
 
 private:

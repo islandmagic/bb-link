@@ -30,7 +30,10 @@
 
 #define FIRMWARE_VERSION_MAJOR 0
 #define FIRMWARE_VERSION_MINOR 7
-#define FIRMWARE_VERSION_PATCH 6
+#define FIRMWARE_VERSION_PATCH 7
+
+#define DEVICE_NAMESPACE "bb-link-hw"
+#define IDENTITY_KEY "identity"
 
 enum hardware_board_t {
   hardware_board_unknown = 0,
@@ -67,7 +70,8 @@ public:
   Adapter();
   void init();
   void perform();
-  Bridge bridge = Bridge(ADAPTER_NAME);
+  Bridge bridge;
+  String getAdapterName();
 
 private:
 #if defined(ARDUINO_TINYPICO)
@@ -121,6 +125,8 @@ private:
 
   void onWrite(BLECharacteristic *pCharacteristic);
   void onRead(BLECharacteristic *pCharacteristic);
+
+  String fetchAdapterName();
 };
 
 #endif

@@ -151,6 +151,11 @@ void Bridge::factoryReset()
   esp_restart();
 }
 
+String Bridge::getAdapterName()
+{
+  return adapterName;
+}
+
 bool Bridge::isReady()
 {
   return (bleStateMachine.isInState(bleConnectedState) && btcStateMachine.isInState(btcConnectedState));
