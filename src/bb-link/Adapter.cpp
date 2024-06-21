@@ -403,7 +403,8 @@ void Adapter::idleUpdate()
       char buffer[256];
       Preferences preferences;
       Serial.setTimeout(5000);
-      int count = Serial.readBytesUntil('\n', buffer, sizeof(buffer)-1);
+      int count = 0;
+      count = Serial.readBytesUntil('\n', buffer, sizeof(buffer)-1);
       if (count == 0)
       {
         Serial.println("No identity provided");
