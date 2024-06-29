@@ -53,8 +53,27 @@ Adapter::Adapter() : idleState(
                          { this->otaFlashUpdate(); },
                          [this]
                          { this->otaFlashExit(); }),
-                     adapterStateMachine(idleState)
+                     adapterStateMachine(idleState),
+                     bridge(fetchAdapterName())
 {
+}
+
+String Adapter::fetchAdapterName()
+{
+  String name = ADAPTER_NAME;
+  Preferences preferences;
+
+  if (preferences.begin(DEVICE_NAMESPACE, true))
+  {
+    name = preferences.getString(IDENTITY_KEY, ADAPTER_NAME);
+    preferences.end();
+  }
+  return name;
+}
+
+String Adapter::getAdapterName()
+{
+  return bridge.getAdapterName();
 }
 
 void Adapter::init()
@@ -346,12 +365,14 @@ void Adapter::idleUpdate()
     switch (ch)
     {
     case 'r':
-      Log.warningln("Reboot");
+      // Reboot device
+      Serial.println("Rebooting...");
       delay(2000);
       esp_restart();
       break;
     case 'R':
-      Log.warningln("Perform factory reset");
+      // Factory reset, clear paired radio
+      Serial.println("Perform factory reset");
       bridge.factoryReset();
       adapterStateMachine.transitionTo(idleState);
       break;
@@ -370,6 +391,59 @@ void Adapter::idleUpdate()
         Log.setLevel(Log.getLevel() + 1);
       }
       Serial.printf("Log level: %s\n", logLevels[Log.getLevel()]);
+      break;
+    case 'i':
+      // Print identity
+      Serial.printf("Identity: %s\n", getAdapterName().c_str());
+      break;
+    case 'I':
+      // Set new identity
+      char buffer[32];
+      Preferences preferences;
+      Serial.setTimeout(5000);
+      int count = 0;
+      count = Serial.readBytesUntil('\n', buffer, sizeof(buffer)-1);
+      if (count == 0)
+      {
+        Serial.println("No identity provided");
+        if (preferences.begin(DEVICE_NAMESPACE, false))
+        {
+          preferences.remove(IDENTITY_KEY);
+          preferences.end();
+          Serial.println("Identity removed, rebooting...");
+          delay(2000);
+          esp_restart();
+        }
+        else
+        {
+          Serial.println("Failed to open preferences");
+        }
+      }
+      else
+      {
+        Serial.printf("Read %d characters\n", count);
+        buffer[count] = '\0';
+        Serial.printf("New identity: %s\n", buffer);
+        if (preferences.begin(DEVICE_NAMESPACE, false))
+        {
+          int result = preferences.putString(IDENTITY_KEY, buffer);
+          preferences.end();
+          if (result)
+          {
+            Serial.println("Saved, rebooting...");
+            delay(2000);
+            esp_restart();
+          }
+          else
+          {
+            Serial.println("Failed to save identity");
+          }
+        }
+        else
+        {
+          Serial.println("Failed to open preferences");
+        }
+      }
       break;
     }
   }

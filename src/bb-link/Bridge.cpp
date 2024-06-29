@@ -151,6 +151,11 @@ void Bridge::factoryReset()
   esp_restart();
 }
 
+String Bridge::getAdapterName()
+{
+  return adapterName;
+}
+
 bool Bridge::isReady()
 {
   return (bleStateMachine.isInState(bleConnectedState) && btcStateMachine.isInState(btcConnectedState));
@@ -203,7 +208,7 @@ bool Bridge::initBLE()
 {
   Log.traceln("Bridge: initBLE");
 
-  BLEDevice::init(ADAPTER_NAME);
+  BLEDevice::init(adapterName.c_str());
   pBLEServer = BLEDevice::createServer();
   pBLEServer->setCallbacks(this);
 
@@ -729,6 +734,7 @@ void Bridge::btcDisconnectedEnter()
   {
     // The connect method in BT serial is blocking. Use a task to connect
     Log.infoln("BTC: attempt to connect to %s at %s", remoteName, BTAddress(remoteAddress).toString().c_str());
+    btSerial.disconnect(); // Just in case. If radio is already connected, reconnecting could lead to crash
     xTaskCreate(
         connectToBluetooth,    // Task function
         "connectBT",           // Task name
