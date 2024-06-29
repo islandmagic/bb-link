@@ -734,6 +734,7 @@ void Bridge::btcDisconnectedEnter()
   {
     // The connect method in BT serial is blocking. Use a task to connect
     Log.infoln("BTC: attempt to connect to %s at %s", remoteName, BTAddress(remoteAddress).toString().c_str());
+    btSerial.disconnect(); // Just in case. If radio is already connected, reconnecting could lead to crash
     xTaskCreate(
         connectToBluetooth,    // Task function
         "connectBT",           // Task name
