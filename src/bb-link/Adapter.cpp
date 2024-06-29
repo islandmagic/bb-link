@@ -65,11 +65,9 @@ String Adapter::fetchAdapterName()
 
   if (preferences.begin(DEVICE_NAMESPACE, true))
   {
-    Serial.println("Preferences opened");
     name = preferences.getString(IDENTITY_KEY, ADAPTER_NAME);
     preferences.end();
   }
-  Serial.printf("Adapter name: %s\n", name.c_str());
   return name;
 }
 
