@@ -398,7 +398,7 @@ void Adapter::idleUpdate()
       break;
     case 'I':
       // Set new identity
-      char buffer[256];
+      char buffer[32];
       Preferences preferences;
       Serial.setTimeout(5000);
       int count = 0;
@@ -421,6 +421,7 @@ void Adapter::idleUpdate()
       }
       else
       {
+        Serial.printf("Read %d characters\n", count);
         buffer[count] = '\0';
         Serial.printf("New identity: %s\n", buffer);
         if (preferences.begin(DEVICE_NAMESPACE, false))
