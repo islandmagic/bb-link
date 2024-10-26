@@ -23,6 +23,28 @@ enum tnc_mode_t : int
   tncUnknown = 0xFF
 };
 
+enum baud_rate_t : int
+{
+  baudRate1200 = 0x00,
+  baudRate9600 = 0x01,
+  baudRateUnknown = 0xFF
+};
+
+enum vfo_mode_t : int
+{
+  modeFM = 0x00,
+  modeDV = 0x01,
+  modeAM = 0x02,
+  modeLSB = 0x03,
+  modeUSB = 0x04,
+  modeCW = 0x05,
+  modeNFM = 0x06,
+  modeDR = 0x07,
+  modeWFM = 0x08,
+  modeRCW = 0x09,
+  modeUnknown = 0xFF
+};
+
 class THD7x
 {
   public:
@@ -30,6 +52,12 @@ class THD7x
 
     void setFrequency(vfo_t vfo, uint32_t frequency);
     bool getFrequency(vfo_t vfo, uint32_t *frequency);
+
+    void setBaudRate(baud_rate_t baud_rate);
+    bool getBaudRate(baud_rate_t *baud_rate);
+
+    void setMode(vfo_t vfo, vfo_mode_t mode);
+    bool getMode(vfo_t vfo, vfo_mode_t *mode);
 
     void setTNC(vfo_t vfo, tnc_mode_t mode);
     bool getTNC(vfo_t *vfo, tnc_mode_t *mode);

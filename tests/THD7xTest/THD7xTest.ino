@@ -28,6 +28,28 @@ test(getFrequency)
   assertEqual((uint32_t)145000000L, frequency);
 }
 
+test(setBaudRate)
+{
+  BluetoothSerial mockBluetoothSerial;
+  THD7x thd7x = THD7x(mockBluetoothSerial);
+  thd7x.setBaudRate(baudRate9600);
+  char buffer[32];
+  int length = mockBluetoothSerial.getWriteBuffer(buffer, 32);
+  assertEqual(5, length);
+  buffer[length] = '\0'; 
+  assertEqual("AS 1\r", buffer);
+}
+
+test(getBaudRate)
+{
+  BluetoothSerial mockBluetoothSerial;
+  THD7x thd7x = THD7x(mockBluetoothSerial);
+  baud_rate_t baud_rate;
+  mockBluetoothSerial.setMockReadValue("AS 1");
+  assertTrue(thd7x.getBaudRate(&baud_rate));
+  assertEqual(baudRate9600, baud_rate);
+}
+
 test(setTNC)
 {
   BluetoothSerial mockBluetoothSerial;
@@ -50,6 +72,28 @@ test(getTNC)
   assertTrue(thd7x.getTNC(&vfo, &mode));
   assertEqual(vfoA, vfo);
   assertEqual(tncKISS, mode);
+}
+
+test(setMode)
+{
+  BluetoothSerial mockBluetoothSerial;
+  THD7x thd7x = THD7x(mockBluetoothSerial);
+  thd7x.setMode(vfoA, modeFM);
+  char buffer[32];
+  int length = mockBluetoothSerial.getWriteBuffer(buffer, 32);
+  assertEqual(7, length);
+  buffer[length] = '\0'; 
+  assertEqual("MD 0,0\r", buffer);
+}
+
+test(getMode)
+{
+  BluetoothSerial mockBluetoothSerial;
+  THD7x thd7x = THD7x(mockBluetoothSerial);
+  vfo_mode_t mode;
+  mockBluetoothSerial.setMockReadValue("MD 1,5");
+  assertTrue(thd7x.getMode(vfoB, &mode));
+  assertEqual(modeCW, mode);
 }
 
 test(getRadioId)
