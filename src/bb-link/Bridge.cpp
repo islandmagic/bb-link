@@ -528,6 +528,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
       application sets the baud rate first.
     */
     desiredBaudRate = static_cast<baud_rate_t>(cmd->data.uint8);
+    break;
   }
   case extended_hw_start_scan:
   {
