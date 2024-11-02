@@ -35,6 +35,28 @@ bool THD7x::getFrequency(vfo_t vfo, uint32_t *frequency) {
 }
 
 /*
+  https://github.com/LA3QMA/TH-D74-Kenwood/blob/master/commands/AS.md
+*/
+void THD7x::setBaudRate(baud_rate_t baud_rate)
+{
+  char command[CMD_BUFFER_SIZE];
+  sprintf(command, "AS %1d", baud_rate);
+  char response[CMD_BUFFER_SIZE];
+  sendCmd(command, response, CMD_BUFFER_SIZE);
+}
+
+bool THD7x::getBaudRate(baud_rate_t *baud_rate)
+{
+  char response[CMD_BUFFER_SIZE];
+  if (sendCmd("AS", response, CMD_BUFFER_SIZE)) {
+    // convert ascii char to int
+    *baud_rate = static_cast<baud_rate_t>(response[3] - '0');
+    return true;
+  }
+  return false;
+}
+
+/*
   https://github.com/LA3QMA/TH-D74-Kenwood/blob/master/commands/TN.md
 */
 
@@ -51,6 +73,28 @@ bool THD7x::getTNC(vfo_t *vfo, tnc_mode_t *mode) {
     // convert ascii char to int
     *vfo = static_cast<vfo_t>(response[5] - '0');
     *mode = static_cast<tnc_mode_t>(response[3] - '0');
+    return true;
+  }
+  return false;
+}
+
+/*
+  https://github.com/LA3QMA/TH-D74-Kenwood/blob/master/commands/MD.md
+*/
+void THD7x::setMode(vfo_t vfo, vfo_mode_t mode) {
+  char command[CMD_BUFFER_SIZE];
+  sprintf(command, "MD %d,%d", vfo, mode);
+  char response[CMD_BUFFER_SIZE];
+  sendCmd(command, response, CMD_BUFFER_SIZE);
+}
+
+bool THD7x::getMode(vfo_t vfo, vfo_mode_t *mode) {
+  char response[CMD_BUFFER_SIZE];
+  char command[CMD_BUFFER_SIZE];
+  sprintf(command, "MD %d", vfo);
+  if (sendCmd(command, response, CMD_BUFFER_SIZE)) {
+    // convert ascii char to int
+    *mode = static_cast<vfo_mode_t>(response[5] - '0');
     return true;
   }
   return false;

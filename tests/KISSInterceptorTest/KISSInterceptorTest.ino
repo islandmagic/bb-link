@@ -33,6 +33,16 @@ test(extractExtendedHardwareCommandRestoreFrequency)
   assertEqual(extended_hw_restore_frequency, cmd.action);
 }
 
+test(extractExtendedHardwareCommandSetBaudRate)
+{
+  KISSInterceptor kissInterceptor;
+  uint8_t frame[] = {0xC0, 0x06, 0xF4, 0x01, 0xC0};  
+  extended_hw_cmd_t cmd;
+  assertTrue(kissInterceptor.extractExtendedHardwareCommand(frame, sizeof(frame), &cmd));
+  assertEqual(extended_hw_set_baud_rate, cmd.action);
+  assertEqual((uint8_t)0x01, cmd.data.uint8);
+}
+
 test(extractExtendedHardwareCommandStartScan)
 {
   KISSInterceptor kissInterceptor;

@@ -62,6 +62,9 @@ private:
   vfo_t vfo = vfoUnknown;
   uint32_t previousFrequency = 0;
   tnc_mode_t previousTNCMode = tncUnknown;
+  baud_rate_t previousBaudRate = baudRateUnknown;
+  baud_rate_t desiredBaudRate = baudRateUnknown;
+  vfo_mode_t previousMode = modeUnknown;
 
   KISSInterceptor kissInterceptor = KISSInterceptor();
 

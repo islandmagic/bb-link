@@ -27,6 +27,8 @@ static const uint8_t EXTENDED_HW_CMD_GET_PAIRED_DEVICE = 0xF1;
 static const uint8_t EXTENDED_HW_CMD_SET_RIG_CTRL = 0xF2;
 static const uint8_t EXTENDED_HW_CMD_FACTORY_RESET = 0xF3;
 
+static const uint8_t EXTENDED_HW_CMD_SET_BAUD_RATE = 0xF4;
+
 enum extended_hw_action_t : uint8_t
 {
   extended_hw_set_frequency = 0x00,
@@ -42,6 +44,7 @@ enum extended_hw_action_t : uint8_t
   extended_hw_get_paired_device = 0x0A,
   extended_hw_set_rig_ctrl = 0x0B,
   extended_hw_factory_reset = 0x0C,
+  extended_hw_set_baud_rate = 0x0D,
   extended_hw_unknown = 0xFF
 };
 

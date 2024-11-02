@@ -1,7 +1,7 @@
-require 'serialport'
+require 'rubyserial'
 
 def send_command(port, command)
-  serial_port = SerialPort.new(port, 115200, 8, 1, SerialPort::NONE)
+  serial_port = Serial.new(port, 115200)
   serial_port.write(command)
   serial_port.write("\n")
   serial_port.close

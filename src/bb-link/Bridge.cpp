@@ -423,6 +423,33 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
           thd7x.exitKISS();
         }
 
+        Log.infoln("BTC: try to get baud rate");
+        if (thd7x.getBaudRate(&previousBaudRate))
+        {
+          Log.infoln("BTC: previous baud rate: %d", previousBaudRate);
+        }
+
+        if (desiredBaudRate != baudRateUnknown && previousBaudRate != desiredBaudRate)
+        {
+          Log.infoln("BTC: set baud rate");
+          thd7x.setBaudRate(desiredBaudRate);
+        }
+
+        Log.infoln("BTC: try to get mode");
+        if (thd7x.getMode(vfo, &previousMode))
+        {
+          Log.infoln("BTC: previous mode: %d", previousMode);
+          if (previousMode != modeFM)
+          {
+            thd7x.setMode(vfo, modeFM);
+          }
+        }
+        else
+        {
+          previousMode = modeUnknown;
+          Log.errorln("BTC: failed to get previous mode");
+        }
+
         Log.infoln("BTC: try to set frequency: %d", cmd->data.uint32);
 
         if (thd7x.getFrequency(vfo, &previousFrequency))
@@ -433,7 +460,7 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
         else
         {
           previousFrequency = 0;
-          Log.errorln("BTC: failed to get previousFrequency");
+          Log.errorln("BTC: failed to get previous frequency");
         }
 
         // Show time
@@ -468,6 +495,17 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
         thd7x.setFrequency(vfo, previousFrequency);
         previousFrequency = 0;
 
+        if (previousMode != modeUnknown && previousMode != modeFM)
+        {
+          thd7x.setMode(vfo, previousMode);
+        }
+
+        if (desiredBaudRate != baudRateUnknown && previousBaudRate != desiredBaudRate)
+        {
+          Log.infoln("BTC: restore baud rate");
+          thd7x.setBaudRate(previousBaudRate);
+        }
+
         // As long as BLE is connected, we want the radio to be in KISS mode
         thd7x.setTNC(vfo, tncKISS);
       }
@@ -476,6 +514,20 @@ void Bridge::processExtendedHardwareCommand(extended_hw_cmd_t *cmd)
         Log.infoln("BTC: no previous frequency to restore");
       }
     }
+    break;
+  }
+  case extended_hw_set_baud_rate:
+  {
+    Log.traceln("BTC: extended_hw_set_baud_rate");
+    /*
+      Save the desired baud rate for now. We could set the radio right away
+      but that would require getting out of KISS mode which is an expensive operation
+      and leads to the radio beeping. It's also expected to be seldome as there are not
+      many 9600 stations.
+      Defeer setting the baud rate when changing frequency. This assumes that the host 
+      application sets the baud rate first.
+    */
+    desiredBaudRate = static_cast<baud_rate_t>(cmd->data.uint8);
     break;
   }
   case extended_hw_start_scan:

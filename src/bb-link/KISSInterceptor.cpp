@@ -71,6 +71,14 @@ bool KISSInterceptor::extractExtendedHardwareCommand(uint8_t *buffer, size_t siz
             cmd->action = extended_hw_restore_frequency;
             return true;
 
+          case EXTENDED_HW_CMD_SET_BAUD_RATE:
+          {
+            uint8_t baud_rate = unescapedBuffer[i + 3];
+            Log.infoln("Set baud rate cmd: %d", baud_rate);
+            cmd->action = extended_hw_set_baud_rate;
+            cmd->data.uint8 = baud_rate;
+            return true;
+          }
           case EXTENDED_HW_CMD_START_SCAN:
             Log.infoln("Start scan cmd");
             cmd->action = extended_hw_start_scan;
