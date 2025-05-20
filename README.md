@@ -1,18 +1,25 @@
 <hr/>
+
+### Psst… skip the soldering.
+
 <a href="https://islandmagic.co/products/B-B-Link-Adapter-p629580960?utm_campaign=diy&utm_medium=web&utm_source=github">
               <img src="https://d2j6dbq0eux0bg.cloudfront.net/images/99145778/4295809032" width="30%">
 </a>
               <br/>
-              <h2>
-              👉 <a href="https://islandmagic.co/products/B-B-Link-Adapter-p629580960?utm_campaign=diy&utm_medium=web&utm_source=github">Check out</a> the new ready-made version that plugs directly into USB-C!
-            </h2>
+ 
+### 👉 <a href="https://islandmagic.co/products/B-B-Link-Adapter-p629580960?utm_campaign=diy&utm_medium=web&utm_source=github">Check out</a> the sleek ready-made version that plugs directly into USB-C!
+
 <hr/>
 
 # B.B. Link, the BLE to Bluetooth Classic adapter for Kenwood TH-D74/5 Radios
 
-Some devices, like the Kenwood TH-D74 radio only support Bluetooth Classic serial profile. iOS devices only support Bluetooth Low Energy (BLE). They are not compatible and as such, you can't pair those devices together. This code provides a way to create an adapter that can interface a device that exposes a serial profile over Bluetooth Classic, to an iOS device via BLE. Its main purpose is to enable iOS app that supports AX.25 packet like RadioMail or APRS.fi to use the TNC built in the radio as a modem.
+Some devices, like the Kenwood TH-D75 radio only support Bluetooth Classic serial profile. iOS devices only support Bluetooth Low Energy (BLE). They are not compatible and as such, you can't pair those devices together. This code provides a way to create an adapter that can interface a device that exposes a serial profile over Bluetooth Classic, to an iOS device via BLE. Its main purpose is to enable iOS app that supports AX.25 packet like RadioMail or APRS.fi to use the TNC built in the radio as a modem.
 
-For a detailed "how-to build" this adapter, watch this video: https://www.youtube.com/watch?v=xLze6qDOLww. After you're done, come back and follow the instructions here as they are continually updated.
+For a detailed "how-to build" this adapter, watch this video: 
+
+[![Watch the video](https://image.mux.com/SZQsZnBJDJf4GMUrTRxJ386tSpsIlRP02yfmXZr79TKg/thumbnail.png?time=1200)](https://player.mux.com/SZQsZnBJDJf4GMUrTRxJ386tSpsIlRP02yfmXZr79TKg)
+
+After you're done, come back and follow the instructions here as they are continually updated.
 
 ## Hardware
 
