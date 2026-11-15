@@ -27,7 +27,9 @@ extern Adapter adapter;
 void connectToBluetooth(void *address)
 {
   Log.traceln("BTC: connecting to Bluetooth Classic interface");
-  adapter.bridge.btSerial.connect((uint8_t *)address, 0, ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER);
+  // Require authentication so the adapter initiates pairing. The TH-D74/75 request it
+  // themselves; the TM-D750 does not, so without this it is never paired.
+  adapter.bridge.btSerial.connect((uint8_t *)address, 0, ESP_SPP_SEC_ENCRYPT | ESP_SPP_SEC_AUTHENTICATE, ESP_SPP_ROLE_MASTER);
   vTaskDelete(NULL);
 }
 
