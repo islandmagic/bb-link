@@ -13,6 +13,7 @@
 
 #define BYTE_TRANSMIT_TIME 7             // Aprox time in ms to transmit a byte at 1200 baud
 #define RETRY_BTC_CONNECT_INTERVAL 15000 // Try to connect to radio Bluetooth Classic interface every x ms
+#define PAIRING_CONFIRM_TIMEOUT 35000    // Don't retry while the user may still be confirming pairing on the radio
 const size_t RX_BUF_SIZE = 1024;         // BLE 4.2 supports up to 512. MTU is negotiated by client.
 
 const char PREF_RADIO_NAME[] = "radioName";
@@ -754,6 +755,7 @@ void Bridge::onRead(BLECharacteristic *pCharacteristic)
 void Bridge::onBTConfirmRequestCallback(uint32_t numVal)
 {
   Log.infoln("Pairing pin: %l", numVal);
+  pairingRequestedAt = millis();
   btSerial.confirmReply(true);
 }
 
@@ -775,6 +777,9 @@ void Bridge::onBTAuthCompleteCallback(boolean success)
   else
   {
     Log.warningln("Pairing failed, rejected by user");
+    // Retry right away. On success keep holding off until the connection completes,
+    // a retry at that point would disconnect it.
+    pairingRequestedAt = 0;
   }
 }
 
@@ -807,7 +812,10 @@ void Bridge::btcDisconnectedUpdate()
     btcStateMachine.transitionTo(btcConnectedState);
   }
 
-  if (btcStateMachine.timeInCurrentState() > RETRY_BTC_CONNECT_INTERVAL)
+  // Retrying tears down the connection, so wait while a pairing is waiting for the user to confirm on the radio
+  bool pairingPending = pairingRequestedAt != 0 && millis() - pairingRequestedAt < PAIRING_CONFIRM_TIMEOUT;
+
+  if (btcStateMachine.timeInCurrentState() > RETRY_BTC_CONNECT_INTERVAL && !pairingPending)
   {
     // Retry connection
     btcStateMachine.immediateTransitionTo(btcDisconnectedState);

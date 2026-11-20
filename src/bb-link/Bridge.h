@@ -83,6 +83,7 @@ private:
   uint8_t remoteAddress[ESP_BD_ADDR_LEN];
   char remoteName[MAX_BTC_DEVICE_NAME_LEN];
   bool connectToPairedDevice = false;
+  volatile unsigned long pairingRequestedAt = 0;
   bool useRigControl = true;
 
   Preferences preferences;
